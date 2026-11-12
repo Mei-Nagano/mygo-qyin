@@ -113,7 +113,13 @@ func (a *app) dailyCard(c *ui.Context, now time.Time) {
 		})
 		ui.Row(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Padding(0, dailyPadX).Gap(28).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(6).Children(func() {
-				ui.Textf(c, "%d月%d日 %s · %s", now.Month(), now.Day(), weekday(now), a.dailyNote()).FontSize(12).FontWeight(600).LetterSpacing(0.3).TextColor(white.Alpha(0.66)).MaxLines(1)
+				// The day alone: how the songs are picked needs no saying, the
+				// sign-in it waits on does.
+				day := fmt.Sprintf("%d月%d日 %s", now.Month(), now.Day(), weekday(now))
+				if a.profile == nil {
+					day += " · 登录后为你专属生成"
+				}
+				ui.Text(c, day).FontSize(12).FontWeight(600).LetterSpacing(0.3).TextColor(white.Alpha(0.66)).MaxLines(1)
 				ui.Text(c, "每日推荐").FontSize(32).FontWeight(800).LetterSpacing(-0.8).LineHeight(1.15)
 				ui.Text(c, dailyArtists(songs)).FontSize(13).TextColor(white.Alpha(0.8)).MaxLines(1)
 				ui.Row(c).Gap(10).Margin(12, 0, 0, 0).Children(func() {
@@ -468,14 +474,6 @@ func drawRecord(p *ui.Painter, r ui.Rect, bmp *ui.Bitmap, angle float32) {
 	p.Stroke(label, radixInk.Alpha(0.35), lr, 1.5)
 	// The spindle hole.
 	p.Fill(ui.Rect{X: cx - 2.5, Y: cy - 2.5, W: 5, H: 5}, radixSage(true, 1), 2.5)
-}
-
-// dailyNote says, shortly, how the day's songs are picked.
-func (a *app) dailyNote() string {
-	if a.profile == nil {
-		return "登录后为你专属生成"
-	}
-	return "QQ 音乐每日推荐"
 }
 
 // dailyBlurb says whose taste the day's songs follow.

@@ -140,6 +140,12 @@ func (a *app) settingsContent(c *ui.Context) {
 					a.redraw()
 				}
 			})
+			row("主窗口遮罩", "在材质上盖一层中性难面，侧边栏与页面共用，文字清晰；关闭后两边都直接显示材质", func() {
+				if ui.Switch(c.Key("main-scrim"), &s.MainScrim).Label("主窗口遮罩").Disabled(!s.MainMaterial).Changed() {
+					s.save()
+					a.redraw()
+				}
+			})
 		}
 
 		if a.canHideOnClose() {

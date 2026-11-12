@@ -66,10 +66,9 @@ func (a *app) view(c *ui.Context) {
 			side := ui.Column(c).Width(sidebarWidth)
 			if !c.Vibrancy() {
 				side.Background(p.sidebar)
-			} else if a.acrylicSidebar(c) {
-				// Neutral frost quiets the desktop's color without adding a
-				// green cast, while leaving the system acrylic visible beneath.
-				side.Background(radixGray(p.dark, 2).Alpha(0.5))
+			} else {
+				// The page's frost: one window, one material.
+				side.Background(a.materialVeil(c))
 			}
 			side.Children(func() { a.sidebar(c) })
 			// Keyed, so that a popover of the sidebar opening or closing
@@ -292,14 +291,25 @@ func (a *app) acrylicSidebar(c *ui.Context) bool {
 	return runtime.GOOS == "windows" && a.settings.sidebarVibrancy() == mygo.VibrancyAcrylic && c.Vibrancy()
 }
 
-// pageSurface lets the desktop's material show under the page while its
-// cards keep their own surfaces: a veil of the page's color quiets what is
-// behind it enough for the page's text to read.
+// materialVeil is the frost over the window's material, shared by the sidebar
+// and the page so that one window reads alike: neutral, which quiets the
+// desktop's color without adding a green cast while leaving the system
+// material visible beneath. Without a material, or with the scrim off, the
+// material shows as it is.
+func (a *app) materialVeil(c *ui.Context) ui.Color {
+	if runtime.GOOS != "windows" || !c.Vibrancy() || !a.settings.MainScrim {
+		return ui.Transparent
+	}
+	return radixGray(a.pal.dark, 2).Alpha(0.5)
+}
+
+// pageSurface lets the desktop's material show under the page, its cards and
+// lists keeping their own surfaces.
 func (a *app) pageSurface(c *ui.Context, fallback ui.Color) ui.Color {
 	if !a.settings.pageMaterial() || !c.Vibrancy() {
 		return fallback
 	}
-	return fallback.Alpha(0.8)
+	return a.materialVeil(c)
 }
 
 // playerBarHeight is the height of the player along the foot of the pages.

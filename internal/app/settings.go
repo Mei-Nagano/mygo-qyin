@@ -52,6 +52,9 @@ type settings struct {
 	// MainMaterial shows that same material under the page on Windows, its
 	// cards staying opaque over it; off keeps the page's own background.
 	MainMaterial bool `json:"mainMaterial,omitempty"`
+	// MainScrim keeps a veil of the page's color over that material, so that
+	// its text reads on any wallpaper; off shows the material as it is.
+	MainScrim bool `json:"mainScrim"`
 	// Smoke makes the progress bars comets trailing smoke as music plays,
 	// for a few percent of a core: the listener turns it on.
 	Smoke bool `json:"smoke"`
@@ -107,7 +110,7 @@ type settings struct {
 }
 
 func defaultSettings() settings {
-	return settings{NotchActivity: true, Quality: "exhigh", Appearance: "system", SidebarMaterial: "acrylic", Volume: 0.8, PlaybackFade: true, Normalize: true, AppIcon: "dock-and-menubar", CacheMB: 2048, Captions: true}
+	return settings{NotchActivity: true, Quality: "exhigh", Appearance: "system", SidebarMaterial: "acrylic", MainScrim: true, Volume: 0.8, PlaybackFade: true, Normalize: true, AppIcon: "dock-and-menubar", CacheMB: 2048, Captions: true}
 }
 
 const (

@@ -246,15 +246,11 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 						a.artistLinks(c, tr, white.Alpha(0.6), white, true).FontSize(15).SingleLine()
 					})
 					a.likeButton(c.Key("like"), tr, 22, white.Alpha(0.7), mediaSurface)
-					a.songMenu(c.Key("more"), tr, 22, white.Alpha(0.7), mediaSurface).Margin(0, -8, 0, 0)
+					a.nowPlayingMenu(c.Key("more"), tr, 22, white.Alpha(0.7), mediaSurface).Margin(0, -8, 0, 0)
 				})
 				a.npRise(a.scrubber(c.Key("np-scrub"), &a.npScrub, white.Alpha(0.18), white.Alpha(0.9), 16, accent.Mix(white, 0.35)), 2)
-				// As tall with the quality's badge as without it: the badge goes
-				// while the next song loads, and the column would move with it.
 				a.npRise(ui.Row(c).Height(16).AlignItems(ui.Center), 2).Children(func() {
 					ui.Text(c, clock(pl.Position())).FontSize(11).FontFeatures("tnum").TextColor(white.Alpha(0.5))
-					ui.Spacer(c)
-					qualityBadge(c, pl.Stream())
 					ui.Spacer(c)
 					status := "-" + clock(pl.Duration()-pl.Position())
 					if pl.Loading() {
@@ -445,19 +441,6 @@ func (a *app) radioChip(c *ui.Context, name string) {
 	}
 }
 
-// qualityBadge marks a lossless stream, as it plays.
-func qualityBadge(c *ui.Context, st *qqmusic.Stream) {
-	if st == nil || !qqmusic.Lossless(st.Level) {
-		return
-	}
-	label := "无损"
-	if st.Level == "hires" {
-		label = "Hi-Res"
-	}
-	ui.Text(c, label).FontSize(9.5).FontWeight(800).LetterSpacing(0.6).TextColor(radixAmber(true, 11)).
-		Padding(1, 6).Radius(4).Border(1, radixAmber(true, 8))
-}
-
 // stageBar is the slim bar along the foot of the stage: what plays, where
 // it is, and the controls.
 func (a *app) stageBar(c *ui.Context, tr *qqmusic.Track, art *artwork, accent ui.Color) {
@@ -477,7 +460,7 @@ func (a *app) stageBar(c *ui.Context, tr *qqmusic.Track, art *artwork, accent ui
 						a.artistLinks(c, tr, white.Alpha(0.55), white).FontSize(12).SingleLine()
 					})
 					a.likeButton(c.Key("like"), tr, 17, white.Alpha(0.6), mediaSurface)
-					a.songMenu(c.Key("more"), tr, 17, white.Alpha(0.6), mediaSurface).Margin(0, 0, 0, -10)
+					a.nowPlayingMenu(c.Key("more"), tr, 17, white.Alpha(0.6), mediaSurface).Margin(0, 0, 0, -10)
 				})
 			})
 			a.npRise(ui.Row(c), 3).Children(func() { a.transport(c, white, white.Alpha(0.45), white, 22, mediaSurface) })

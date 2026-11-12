@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/transfer"
 	"github.com/egoist/mygo/ui"
@@ -13,9 +15,54 @@ var copyText = func(text string) error { return mygo.Clipboard.Write(transfer.Te
 
 // songMenu is three dots that open the menu of tr.
 func (a *app) songMenu(c *ui.Context, tr *qqmusic.Track, size float32, color ui.Color, surface ...buttonSurface) ui.Element {
+	return a.songMenuItems(c, a.songItems(tr, 0), size, color, surface...)
+}
+
+// nowPlayingMenu is the dots of the page playing tr: its menu, and the level
+// of the streams asked for, changed as it plays.
+func (a *app) nowPlayingMenu(c *ui.Context, tr *qqmusic.Track, size float32, color ui.Color, surface ...buttonSurface) ui.Element {
+	return a.songMenuItems(c, func(m *ui.Menu) {
+		a.songItems(tr, 0)(m)
+		m.Separator()
+		a.qualityItems(m)
+	}, size, color, surface...)
+}
+
+// songMenuItems is the dots that open the menu items fills.
+func (a *app) songMenuItems(c *ui.Context, items func(m *ui.Menu), size float32, color ui.Color, surface ...buttonSurface) ui.Element {
 	b := iconButton(c, iconMore, size, color, "更多", surface...)
-	b.Menu(a.songItems(tr, 0))
+	b.Menu(items)
 	return b
+}
+
+// qualityItems lets the listener change the level of the streams from beside
+// what plays: the next song asks for that one, as from the settings.
+func (a *app) qualityItems(m *ui.Menu) {
+	it := m.Submenu("音质", func(sub *ui.Menu) {
+		for _, q := range qualityLevels {
+			chosen := q.level == a.settings.Quality
+			if sub.Item(q.label).Radio(chosen).Chosen() {
+				a.settings.Quality = q.level
+				a.settings.save()
+				a.toast = "音质：" + qualityName(q.level)
+				a.redraw()
+			}
+		}
+	})
+	it.Trailing(qualityName(a.settings.Quality))
+}
+
+// qualityName is a level of streams named shortly, without its detail.
+func qualityName(level string) string {
+	for _, q := range qualityLevels {
+		if q.level == level {
+			if i := strings.Index(q.label, "（"); i > 0 {
+				return q.label[:i]
+			}
+			return q.label
+		}
+	}
+	return qualityLevels[1].label
 }
 
 // songItems builds the menu of what can be done with tr, behind its dots
