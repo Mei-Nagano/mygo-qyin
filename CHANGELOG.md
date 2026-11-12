@@ -4,6 +4,39 @@
 
 - 每日推荐新增自动留档：加载到当日推荐时按天保存到本地，每日推荐页新增「查看历史推荐」按钮，可按日期选择并重新播放当天的歌曲
 
+## 0.4.3
+
+- 支持搜索自己歌单中的歌曲
+- 修复 Linux Wayland 桌面歌词的定位、层级及锁定后鼠标穿透问题
+- 关闭应用时遵循播放淡入淡出设置
+- 优化 Windows 任务栏歌词
+
+### 下载指南
+
+| 处理器架构 | Windows | macOS | Linux |
+| :--- | :--- | :--- | :--- |
+| amd64 | [安装包 .exe](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-setup-0.4.3-amd64.exe) | [安装包 .dmg](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-0.4.3-amd64.dmg) | [.deb](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt_0.4.3_amd64.deb) · [.tar.gz](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-0.4.3-linux-amd64.tar.gz) |
+| arm64 | [安装包 .exe](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-setup-0.4.3-arm64.exe) | [安装包 .dmg](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-0.4.3-arm64.dmg) | [.deb](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt_0.4.3_arm64.deb) · [.tar.gz](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.3/lilt-0.4.3-linux-arm64.tar.gz) |
+
+> Linux：Ubuntu / Debian 等支持 deb 的发行版选 `.deb`，其他发行版选 `.tar.gz`。
+
+## 0.4.2
+
+- 正在播放页面支持调整歌词字号
+- 个人资料显示 QQ 音乐会员到期时间
+- 改进 QQ 与微信登录凭证续期
+- 修复桌面端跨采样率手动切歌时旧歌曲声音残留，并平滑关闭旧音频输出
+- 打磨多处细节
+
+### 下载指南
+
+| 处理器架构 | Windows | macOS | Linux |
+| :--- | :--- | :--- | :--- |
+| amd64 | [安装包 .exe](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-setup-0.4.2-amd64.exe) | [安装包 .dmg](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-0.4.2-amd64.dmg) | [.deb](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt_0.4.2_amd64.deb) · [.tar.gz](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-0.4.2-linux-amd64.tar.gz) |
+| arm64 | [安装包 .exe](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-setup-0.4.2-arm64.exe) | [安装包 .dmg](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-0.4.2-arm64.dmg) | [.deb](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt_0.4.2_arm64.deb) · [.tar.gz](https://github.com/Amamiya23/mygo-qyin/releases/download/v0.4.2/lilt-0.4.2-linux-arm64.tar.gz) |
+
+> Linux：Ubuntu / Debian 等支持 deb 的发行版选 `.deb`，其他发行版选 `.tar.gz`。
+
 ## 0.4.1
 
 - 降低音频播放的内存占用，未写入歌曲缓存的音频优先使用临时文件，播放结束后自动清理
