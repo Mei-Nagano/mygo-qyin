@@ -74,7 +74,7 @@ func (a *app) view(c *ui.Context) {
 			side.Children(func() { a.sidebar(c) })
 			// Keyed, so that a popover of the sidebar opening or closing
 			// keeps what the page and its bars hold, their edges' fades.
-			ui.Box(c.Key("main")).Grow(1).Background(p.bg).BorderWidth(0, 0, 0, 1).BorderColor(a.sidebarSurface(c, p.hairline, 0.06)).Children(func() {
+			ui.Box(c.Key("main")).Grow(1).Background(a.pageSurface(c, p.bg)).BorderWidth(0, 0, 0, 1).BorderColor(a.sidebarSurface(c, p.hairline, 0.06)).Children(func() {
 				a.content(c)
 				// The bars float over the page, which scrolls under them:
 				// positioned, they paint over it.
@@ -292,6 +292,16 @@ func (a *app) acrylicSidebar(c *ui.Context) bool {
 	return runtime.GOOS == "windows" && a.settings.sidebarVibrancy() == mygo.VibrancyAcrylic && c.Vibrancy()
 }
 
+// pageSurface lets the desktop's material show under the page while its
+// cards keep their own surfaces: a veil of the page's color quiets what is
+// behind it enough for the page's text to read.
+func (a *app) pageSurface(c *ui.Context, fallback ui.Color) ui.Color {
+	if !a.settings.pageMaterial() || !c.Vibrancy() {
+		return fallback
+	}
+	return fallback.Alpha(0.8)
+}
+
 // playerBarHeight is the height of the player along the foot of the pages.
 const playerBarHeight = 84
 
@@ -369,7 +379,7 @@ func edgeShown(el ui.Element, under bool) float32 {
 func (a *app) pageTop(c *ui.Context) {
 	top, _ := a.insets(c)
 	edge := ui.Box(c.Key("top-edge")).Absolute().Top(0).Left(0).Right(0).Height(top).DragWindow().
-		Material(glass.ScrollEdge{Hard: true, Background: a.pal.bg})
+		Material(glass.ScrollEdge{Hard: true, Background: a.pageSurface(c, a.pal.bg)})
 	edge.Opacity(edgeShown(edge, a.underTop))
 	if len(a.history) > 0 || len(a.forward) > 0 {
 		ui.Row(c).Absolute().Top(0).Left(20).Height(topBar(c)).AlignItems(ui.Center).Children(func() {

@@ -49,6 +49,9 @@ type settings struct {
 	Appearance string `json:"appearance"`
 	// SidebarMaterial selects mica or acrylic (also when empty) on Windows.
 	SidebarMaterial string `json:"sidebarMaterial,omitempty"`
+	// MainMaterial shows that same material under the page on Windows, its
+	// cards staying opaque over it; off keeps the page's own background.
+	MainMaterial bool `json:"mainMaterial,omitempty"`
 	// Smoke makes the progress bars comets trailing smoke as music plays,
 	// for a few percent of a core: the listener turns it on.
 	Smoke bool `json:"smoke"`
@@ -241,6 +244,12 @@ func (s settings) save() error {
 		return err
 	}
 	return os.WriteFile(path, b, 0o600)
+}
+
+// pageMaterial tells whether the page shows the Windows material too, as its
+// sidebar does; elsewhere the page keeps its own background.
+func (s settings) pageMaterial() bool {
+	return runtime.GOOS == "windows" && s.MainMaterial
 }
 
 // sidebarVibrancy keeps the Windows material choice across launches while

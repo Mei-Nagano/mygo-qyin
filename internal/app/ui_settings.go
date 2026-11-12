@@ -134,6 +134,12 @@ func (a *app) settingsContent(c *ui.Context) {
 					a.redraw()
 				}
 			})
+			row("主窗口显示材质", "页面区域也透出同一材质，卡片与列表保持不透明", func() {
+				if ui.Switch(c.Key("main-material"), &s.MainMaterial).Label("主窗口显示材质").Changed() {
+					s.save()
+					a.redraw()
+				}
+			})
 		}
 
 		if a.canHideOnClose() {
