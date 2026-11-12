@@ -318,8 +318,10 @@ func (a *app) muteButton(c *ui.Context, color ui.Color, surface ...buttonSurface
 }
 
 // volumeSlider is a slim slider with the speaker before it, which mutes.
+// The row keeps its own content width (Shrink(0), fixed slider): a parent
+// row can only center what does not stretch.
 func (a *app) volumeSlider(c *ui.Context, color, track ui.Color, width float32, surface ...buttonSurface) {
-	ui.Row(c).Gap(4).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(4).Shrink(0).AlignItems(ui.Center).Children(func() {
 		a.muteButton(c, color, surface...)
 		s := ui.SliderBase(c.Key("volume"), &a.volume, 0, 1).Width(width).Height(16).FocusRing(false).Label("音量").Cursor(ui.CursorPointer)
 		if s.Changed() {

@@ -95,6 +95,7 @@ func (a *app) signedIn(prof *qqmusic.Profile) {
 	a.restoreSession()
 	a.mine, a.saved, a.recPlaylists, a.liked = nil, nil, nil, nil
 	a.clearSongShelves()
+	a.clearDailyArchive()
 	a.likedPrograms, a.askedPrograms = nil, nil
 	a.likedAlbums = nil
 	a.likedScroll = likedScrollState{}

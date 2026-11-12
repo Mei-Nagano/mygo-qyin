@@ -143,6 +143,13 @@ func (a *app) load(r route) {
 	switch r.page {
 	case pageHome:
 		a.freshenHome()
+	case pageDaily:
+		a.loadDailyArchive()
+		if r.id != 0 {
+			a.loadDailyPast(r.id)
+		}
+	case pageDailyHistory:
+		a.loadDailyArchive()
 	case pagePlaylist:
 		a.loadPlaylist(r.id, false)
 		if r.tab == 1 && a.isLikedPlaylist(r.id) {
@@ -388,6 +395,8 @@ func (a *app) content(c *ui.Context) {
 		a.homePage(c)
 	case pageDaily:
 		a.dailyPage(c)
+	case pageDailyHistory:
+		a.dailyHistoryPage(c)
 	case pageCharts:
 		a.chartsPage(c)
 	case pagePlaylist:
@@ -433,17 +442,28 @@ func (a *app) loadHome() {
 	a.homeLoading, a.homeErr = true, ""
 	a.loadSongShelves()
 	signedIn := a.profile != nil
+	dir := ""
+	if a.profile != nil {
+		dir = dailyArchivePath(a.profile.UserID)
+	}
 	at := time.Now()
 	go func() {
 		featured, err1 := qqmusic.FeaturedPlaylists(30)
 		charts, err2 := qqmusic.Charts()
 		daily, _ := qqmusic.DailySongs()
+		// Keep the day's picks as they arrive, off the main thread.
+		kept := recordDaily(dir, daily, time.Now())
 		var rec []qqmusic.Playlist
 		if signedIn {
 			rec, _ = qqmusic.RecommendedPlaylists()
 		}
 		a.post(func() {
 			a.homeLoading = false
+			// Only fold the kept day into the archive of the account
+			// this very request was made for.
+			if kept != 0 && a.dailyArchive != nil && a.dailyArchive.dir == dir {
+				a.dailyRecorded(kept)
+			}
 			if err1 != nil && err2 != nil {
 				// Loading the new day's again, what shows stays, to try
 				// once more.

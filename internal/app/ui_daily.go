@@ -14,10 +14,10 @@ import (
 
 // dailyArt is the cover of the day's songs: their first cover, blurred,
 // with the date set large over it.
-func (a *app) dailyArt(c *ui.Context, now time.Time, size float32) {
+func (a *app) dailyArt(c *ui.Context, songs []qqmusic.Track, now time.Time, size float32) {
 	var art *artwork
-	if len(a.daily) > 0 {
-		art = a.art.get(qqmusic.Sized(a.daily[0].Album.PicURL, 600), artBackdrop)
+	if len(songs) > 0 {
+		art = a.art.get(qqmusic.Sized(songs[0].Album.PicURL, 600), artBackdrop)
 	}
 	radius := size * 0.07
 	box := ui.Box(c).Size(size, size).Radius(radius).Background(radixSage(true, 6)).
@@ -487,9 +487,24 @@ func (a *app) dailyBlurb() string {
 }
 
 func (a *app) dailyPage(c *ui.Context) {
+	if a.route.id != 0 {
+		a.dailyPastPage(c, a.route.id)
+		return
+	}
 	loading := len(a.daily) == 0
 	if loading && !a.homeLoading {
-		a.centered(c, "暂时没有推荐", a.loadHome)
+		if a.profile == nil {
+			a.centered(c, "暂时没有推荐", a.loadHome)
+			return
+		}
+		// Signed in: the days on file can be read even when today's
+		// picks failed to load.
+		ui.Column(c).Grow(1).Padding(0, pagePad, 32, pagePad).Children(func() {
+			a.centered(c, "暂时没有推荐", a.loadHome)
+			ui.Row(c).Justify(ui.Center).Children(func() {
+				a.dailyHistoryButton(c)
+			})
+		})
 		return
 	}
 	now := c.Now()
@@ -498,7 +513,7 @@ func (a *app) dailyPage(c *ui.Context) {
 	header := func(c *ui.Context) {
 		p := a.pal
 		ui.Row(c).Gap(28).AlignItems(ui.End).Padding(0, 0, 26, 0).Children(func() {
-			a.dailyArt(c, now, 212)
+			a.dailyArt(c, songs, now, 212)
 			ui.Column(c).Gap(8).Children(func() {
 				ui.Text(c, "每日推荐").FontSize(12).FontWeight(600).TextColor(p.accent)
 				ui.Text(c, "每日歌曲推荐").FontSize(30).FontWeight(800).LetterSpacing(-0.6)
@@ -524,6 +539,7 @@ func (a *app) dailyPage(c *ui.Context) {
 						}
 						a.pl.PlayQueue(songs, firstPlayable(songs))
 					}
+					a.dailyHistoryButton(c)
 				})
 			})
 		})

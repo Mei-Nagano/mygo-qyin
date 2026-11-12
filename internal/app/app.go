@@ -16,6 +16,7 @@ type pageKind int
 const (
 	pageHome pageKind = iota
 	pageDaily
+	pageDailyHistory
 	pageCharts
 	pagePlaylist
 	pageSearch
@@ -32,7 +33,8 @@ const (
 
 type route struct {
 	page pageKind
-	// id is the playlist, artist, album, user or podcast the page shows.
+	// id is the playlist, artist, album, user or podcast the page shows;
+	// on the daily page it is the day kept, 20261108, and 0 the day live.
 	id int64
 	// query and kind are what a search page searched for.
 	query string
@@ -97,14 +99,15 @@ type app struct {
 	// answered, and those asked about: see ui_like.go.
 	likedPrograms, askedPrograms map[int64]bool
 
-	daily       []qqmusic.Track
-	dailySpin   spinState // the record on the daily card
-	dailyBars   barState  // the bars on its play button
-	featured    []qqmusic.Playlist
-	charts      []qqmusic.Playlist
-	homeErr     string
-	homeLoading bool
-	homeAt      time.Time // when what the home page shows was asked for
+	daily        []qqmusic.Track
+	dailySpin    spinState         // the record on the daily card
+	dailyBars    barState          // the bars on its play button
+	dailyArchive *dailyArchiveData // the days of past picks kept for the listener
+	featured     []qqmusic.Playlist
+	charts       []qqmusic.Playlist
+	homeErr      string
+	homeLoading  bool
+	homeAt       time.Time // when what the home page shows was asked for
 
 	playlists       map[int64]*qqmusic.Playlist
 	loadingPl       map[int64]bool
