@@ -184,6 +184,53 @@ func mergeLyrics(lrc, translation string) []Line {
 	return Build(lrc, translation, "")
 }
 
+// Spread sets words that came without any times of their own, as QQ serves
+// some songs, along the song's length: the lines share it evenly, an estimate
+// so that the words still follow what plays. The title and the notices some
+// payloads carry are left out.
+func Spread(text string, total time.Duration, title string) []Line {
+	var texts []string
+	for _, raw := range strings.Split(text, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || IsCredit(line) || IsInstrumental(line) || isNotice(line) {
+			continue
+		}
+		texts = append(texts, line)
+	}
+	if len(texts) > 0 && sameText(texts[0], title) {
+		texts = texts[1:]
+	}
+	if len(texts) == 0 || total <= 0 {
+		return nil
+	}
+	share := total / time.Duration(len(texts))
+	lines := make([]Line, 0, len(texts))
+	for i, text := range texts {
+		at := time.Duration(i) * share
+		end := at + share
+		lines = append(lines, Line{At: at, End: end, Text: text, Words: SpreadWords(text, at, end)})
+	}
+	return lines
+}
+
+// notices are what untimed payloads say around the words: who holds the
+// rights, and that copying it is not allowed.
+var notices = regexp.MustCompile(`^(?:℗|©|\(P\)|\(C\))|未经[^。]{0,12}(?:许可|授權|授权)|版[权權]所有|正版授权|Copyright`)
+
+func isNotice(line string) bool { return notices.MatchString(line) }
+
+// sameText tells whether two lines are the same words, whatever their
+// spacing and case.
+func sameText(a, b string) bool {
+	if b == "" {
+		return false
+	}
+	flat := func(s string) string {
+		return strings.ToLower(strings.Join(strings.Fields(s), ""))
+	}
+	return flat(a) == flat(b)
+}
+
 // SpreadWords splits text into words, each Chinese, Japanese or Korean
 // character one of them, and shares the time from start to end among them
 // by their lengths, for lines whose words have no times of their own.
@@ -271,13 +318,18 @@ func Quiets(lines []Line, length, least time.Duration) []Quiet {
 }
 
 // creditNames are what credit lines begin with.
-var creditNames = []string{"作词", "作曲", "编曲", "制作", "监制", "混音", "录音", "母带", "和声", "吉他", "贝斯", "鼓", "键盘", "弦乐", "出品", "发行", "OP", "SP", "词", "曲", "Lyrics", "Music", "Composer", "Arranger", "Producer"}
+var creditNames = []string{"作词", "作曲", "编曲", "制作", "监制", "混音", "录音", "母带", "和声", "吉他", "贝斯", "鼓", "键盘", "弦乐", "出品", "发行", "OP", "SP", "词", "曲", "Lyrics", "Music", "Composer", "Arranger", "Producer",
+	"Production", "Programming", "Pro Tools", "Background", "Vocals", "Engineer",
+	"Studio", "Company", "Editing", "Synths", "Keyboards", "Chorus", "Recorded",
+	"Recording", "Mixing", "Mastering", "Publishing", "Management", "Artwork",
+	"Photography", "Design", "Coordinator", "Supervisor", "Director", "Label"}
 
 // IsCredit reports whether a line names who made the song, as "作词 :
 // 林夕", rather than being sung.
 func IsCredit(text string) bool {
 	i := strings.IndexAny(text, ":：")
-	if i <= 0 || utf8.RuneCountInString(text[:i]) > 12 {
+	// English credits run longer than Chinese ones: "Mastering Engineer".
+	if i <= 0 || utf8.RuneCountInString(text[:i]) > 32 {
 		return false
 	}
 	head := strings.TrimSpace(text[:i])

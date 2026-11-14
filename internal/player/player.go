@@ -682,10 +682,16 @@ func (p *Player) loadSkipping(at, skipped int, play bool, from time.Duration) {
 	go func() {
 		lrc, trans, timed, err := qqmusic.Lyrics(t.ID)
 		var lines []lyrics.Line
+		instrumental := false
 		if err == nil {
 			lines = lyrics.Build(lrc, trans, timed)
+			instrumental = len(lines) == 0 && lyrics.IsInstrumental(lrc)
+			if len(lines) == 0 && !instrumental {
+				// QQ sometimes has the words but not their times: spread over
+				// the song's length, they still follow what plays.
+				lines = lyrics.Spread(lrc, t.Length(), t.Name)
+			}
 		}
-		instrumental := err == nil && len(lines) == 0 && lyrics.IsInstrumental(lrc)
 		p.post(func() {
 			if gen == p.gen {
 				p.lyrics = lines

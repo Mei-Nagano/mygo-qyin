@@ -9,7 +9,11 @@ import (
 )
 
 var (
-	qrcContent = regexp.MustCompile(`(?s)\bLyricContent="([^"]*)"`)
+	// QQ's lyrics hold double quotes of their own, left unescaped inside the
+	// attribute: the content runs to the quote that ends the attribute, not
+	// to the first one, which would cut the song short.
+	qrcContent = regexp.MustCompile(`\bLyricContent="`)
+	qrcAttrEnd = regexp.MustCompile(`"\s*(?:/?>|[A-Za-z_][\w:.-]*\s*=)`)
 	qrcWord    = regexp.MustCompile(`\((\d+),(\d+)\)`)
 )
 
@@ -17,10 +21,14 @@ var (
 // LyricContent. Each text fragment precedes its (absolute start, duration)
 // in milliseconds; literal parentheses and timed spaces remain in the text.
 func ParseQRC(qrc string) []Line {
-	if m := qrcContent.FindStringSubmatch(qrc); m != nil {
+	if m := qrcContent.FindStringIndex(qrc); m != nil {
 		// Extract the attribute before unescaping it: escaped quotes belong
 		// to the lyrics, and the real newlines separate their timed lines.
-		qrc = html.UnescapeString(m[1])
+		content := qrc[m[1]:]
+		if e := qrcAttrEnd.FindStringIndex(content); e != nil {
+			content = content[:e[0]]
+		}
+		qrc = html.UnescapeString(content)
 	}
 	ms := func(s string) time.Duration {
 		n, _ := strconv.ParseInt(s, 10, 64)
@@ -50,7 +58,12 @@ func ParseQRC(qrc string) []Line {
 			line.End = max(line.End, word.End)
 		}
 		line.Text = strings.TrimSpace(line.Text)
-		if line.Text != "" && strings.TrimSpace(body[at:]) == "" {
+		// Text the timings do not cover still belongs to the line: dropping
+		// the line would lose the words altogether.
+		if tail := strings.TrimSpace(body[at:]); tail != "" {
+			line.Text = strings.TrimSpace(line.Text + tail)
+		}
+		if line.Text != "" {
 			lines = append(lines, line)
 		}
 	}
