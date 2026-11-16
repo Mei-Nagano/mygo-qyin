@@ -27,7 +27,6 @@ type artwork struct {
 	soft     *ui.Bitmap // blurred lightly, under a day's own date
 	tint     ui.Color   // the cover's most vivid color
 	accent   ui.Color   // a second one, far from it in hue
-	third    ui.Color   // and a third, farther still
 	data     []byte     // the same encoded data the bitmap keeps to restore its pixels
 	ready    artNeeds   // which derived resources have been made
 	failed   bool
@@ -207,7 +206,7 @@ func (c *artCache) load(url string, a *artwork, need artNeeds) {
 				c.release(a.bmp)
 			} else {
 				if need&artTint != 0 {
-					a.tint, a.accent, a.third = result.tint, result.accent, result.third
+					a.tint, a.accent = result.tint, result.accent
 				}
 				if need&artBlur != 0 {
 					a.backdrop = result.backdrop
@@ -266,7 +265,7 @@ func deriveArt(data []byte, need artNeeds) (*artwork, error) {
 		return nil, err
 	}
 	if need&artTint != 0 {
-		a.tint, a.accent, a.third = dominantColors(img)
+		a.tint, a.accent = dominantColors(img)
 	}
 	if need&artBlur != 0 {
 		blurred := blurImage(img)
@@ -393,15 +392,14 @@ func shrink(img image.Image, n int) *image.RGBA {
 // dominantColor returns the most vivid color that covers much of img: the
 // hue that its saturated pixels share most, at their mean.
 func dominantColor(img image.Image) ui.Color {
-	main, _, _ := dominantColors(img)
+	main, _ := dominantColors(img)
 	return main
 }
 
-// dominantColors returns that color, and the two that come next, far enough
-// apart from each other in hue to read as colors of their own: the three the
-// fluid backdrop mixes. A cover of one hue answers it three times, which the
-// backdrop then turns apart.
-func dominantColors(img image.Image) (main, second, third ui.Color) {
+// dominantColors returns that color, and a second one far enough from it in
+// hue to read as another: the two the fluid backdrop mixes. A cover of one
+// hue answers the same color twice, which the backdrop then turns apart.
+func dominantColors(img image.Image) (main, second ui.Color) {
 	small := shrink(img, 24)
 	const buckets = 18
 	var weight [buckets]float64
@@ -428,43 +426,24 @@ func dominantColors(img image.Image) (main, second, third ui.Color) {
 	if weight[best] < 2 {
 		n := float64(len(small.Pix) / 4)
 		grayColor := ui.RGB(uint8(gray[0]/n*255), uint8(gray[1]/n*255), uint8(gray[2]/n*255))
-		return grayColor, grayColor, grayColor
+		return grayColor, grayColor
 	}
 	colorOf := func(k int) ui.Color {
 		w := weight[k]
 		return ui.RGB(uint8(sum[k][0]/w*255), uint8(sum[k][1]/w*255), uint8(sum[k][2]/w*255))
 	}
 	main = colorOf(best)
-	// The hues farthest from its own, and from each other, that still cover
-	// some of the cover.
-	picked := []int{best}
-	for range 2 {
-		pick, far := -1, 45.0
-		for k := range weight {
-			if weight[k] < weight[best]*0.10 {
-				continue
-			}
-			near := 360.0
-			for _, p := range picked {
-				near = math.Min(near, hueBucketGap(k, p, buckets))
-			}
-			if near > far {
-				pick, far = k, near
-			}
+	// The hue farthest from it that still covers some of the cover.
+	second, far := main, 0.0
+	for k := range weight {
+		if k == best || weight[k] < weight[best]*0.12 {
+			continue
 		}
-		if pick < 0 {
-			break
+		if gap := hueBucketGap(k, best, buckets); gap > far {
+			second, far = colorOf(k), gap
 		}
-		picked = append(picked, pick)
 	}
-	second, third = main, main
-	if len(picked) > 1 {
-		second = colorOf(picked[1])
-	}
-	if len(picked) > 2 {
-		third = colorOf(picked[2])
-	}
-	return main, second, third
+	return main, second
 }
 
 // hueBucketGap is how far apart two hue buckets are, the short way round,
