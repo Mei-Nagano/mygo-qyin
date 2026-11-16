@@ -435,15 +435,22 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 		return ui.RGB(uint8(sum[k][0]/w*255), uint8(sum[k][1]/w*255), uint8(sum[k][2]/w*255))
 	}
 	main = colorOf(best)
-	// The hue farthest from it that still covers some of the cover.
+	// The hue farthest from it that still covers some of the cover, and far
+	// enough that the two read as two colors: a near hue would look like the
+	// same color spread thin. Where the cover has no such hue, the second
+	// turns away from the first instead.
 	second, far := main, 0.0
 	for k := range weight {
-		if k == best || weight[k] < weight[best]*0.20 {
+		if k == best || weight[k] < weight[best]*0.2 {
 			continue
 		}
 		if gap := hueBucketGap(k, best, buckets); gap > far {
 			second, far = colorOf(k), gap
 		}
+	}
+	if far < 90 {
+		h, s, v := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
+		return main, hsvColor(math.Mod(h+150, 360), s, v)
 	}
 	return main, second
 }
