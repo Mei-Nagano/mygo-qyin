@@ -324,7 +324,7 @@ func (a *app) muteButton(c *ui.Context, color ui.Color, surface ...buttonSurface
 func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, volume bool, surface ...buttonSurface) {
 	pl := a.pl
 	ui.Row(c).Gap(size * 0.5).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
-		a.playOrderButton(c, dim, on, size*0.62, surface...)
+		a.playOrderButton(c, color, on, size*0.75, surface...)
 		if iconButton(c.Key("prev"), iconPrev, size*0.85, color, "上一首", surface...).Clicked() {
 			pl.Prev()
 		}
@@ -342,8 +342,9 @@ func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, vo
 
 // playOrderButton is one button for the order the queue plays in, pressed to
 // move on to the next: in order, then round again, then one song round again,
-// then shuffled.
-func (a *app) playOrderButton(c *ui.Context, dim, on ui.Color, size float32, surface ...buttonSurface) {
+// then shuffled. It takes the controls' own color, as the players that draw
+// their own do, and the accent while the order is anything but plain.
+func (a *app) playOrderButton(c *ui.Context, color, on ui.Color, size float32, surface ...buttonSurface) {
 	pl := a.pl
 	icon, label, lit := iconOrder, "顺序播放", false
 	switch {
@@ -354,18 +355,13 @@ func (a *app) playOrderButton(c *ui.Context, dim, on ui.Color, size float32, sur
 	case pl.Repeat() == player.RepeatOne:
 		icon, label, lit = iconRepeat1, "单曲循环", true
 	}
-	if iconButton(c.Key("play-order"), icon, size, dim, label, surface...).TextColor(litColor(lit, dim, on)).
-		Clicked() {
+	tint := color
+	if lit {
+		tint = on
+	}
+	if iconButton(c.Key("play-order"), icon, size, tint, label, surface...).Clicked() {
 		a.cyclePlayOrder()
 	}
-}
-
-// litColor takes color c where lit, else dim.
-func litColor(lit bool, dim, c ui.Color) ui.Color {
-	if lit {
-		return c
-	}
-	return dim
 }
 
 // cyclePlayOrder moves to the next order: in order, round again, one song
