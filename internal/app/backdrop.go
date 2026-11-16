@@ -104,6 +104,7 @@ var Time float
 var Bass float
 var A vec4
 var B vec4
+var C vec4
 
 func hash(p vec2) float {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453)
@@ -120,13 +121,14 @@ func noise(p vec2) float {
 	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
 }
 
-// mass blends col into c around center, in round: uv is the pixel over the
-// canvas, asp the canvas' width over its height, radius the mass' share of
-// the height. Its edge fades out slowly, which is the blur between the
-// colors.
-func mass(c vec3, col vec3, uv vec2, asp float, center vec2, radius float, strength float) vec3 {
+// density is how much of a mass covers uv: one at its center, fading out
+// slowly at its edge, squared so that neighboring masses melt into one
+// another where they meet. uv is the pixel over the canvas, asp the canvas'
+// width over its height, radius the mass' share of the height.
+func density(uv vec2, asp float, center vec2, radius float) float {
 	d := length((uv - center) * vec2(asp, 1.0)) / radius
-	return mix(c, col, (1.0 - smoothstep(0.08, 1.0, d)) * strength)
+	k := 1.0 - smoothstep(0.0, 1.0, d)
+	return k * k
 }
 
 func Fragment(dst vec4, pos vec2) vec4 {
@@ -137,15 +139,18 @@ func Fragment(dst vec4, pos vec2) vec4 {
 	// The whole field drifts through noise of its own, so that the masses
 	// churn and their edges fold as liquids do, rather than sliding whole.
 	warp := vec2(noise(uv*2.2+vec2(t*0.35, 0))-0.5, noise(uv*2.2+vec2(4.7, 1.3)-vec2(0, t*0.3))-0.5)
-	p := uv + warp*0.17
-	// The two colors folded into a deep base, drifting between them.
-	c := mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)) * 0.8
-	// Round masses of them, each on a slow loop of its own, breathing as
-	// the bass comes.
+	p := uv + warp*0.19
+	// The three colors folded into a deep base, drifting among them.
+	base := mix(mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)), C.rgb, 0.3) * 0.72
+	// Round masses, each on a slow loop of its own, breathing as the bass
+	// comes, their colors mixed by how much of each shows here.
 	breath := 1.0 + 0.03*sin(t*0.9) + 0.07*Bass
-	c = mass(c, A.rgb, p, asp, vec2(0.34+0.16*sin(t*0.7), 0.40+0.13*sin(t*1.1+1.3)), 0.50*breath, 0.95)
-	c = mass(c, B.rgb, p, asp, vec2(0.68+0.14*sin(t*0.9+2.1), 0.52+0.15*sin(t*0.6+0.4)), 0.46*breath, 0.9)
-	c = mass(c, mix(A.rgb, B.rgb, 0.5), p, asp, vec2(0.50+0.20*sin(t*0.5+4.2), 0.74+0.10*sin(t*0.8+2.7)), 0.42*breath, 0.7)
+	da := density(p, asp, vec2(0.34+0.16*sin(t*0.7), 0.40+0.13*sin(t*1.1+1.3)), 0.60*breath)
+	db := density(p, asp, vec2(0.70+0.14*sin(t*0.9+2.1), 0.44+0.15*sin(t*0.6+0.4)), 0.54*breath)
+	dc := density(p, asp, vec2(0.52+0.20*sin(t*0.5+4.2), 0.76+0.10*sin(t*0.8+2.7)), 0.48*breath)
+	cov := 1.0 - (1.0-da)*(1.0-db)*(1.0-dc)
+	mixed := (A.rgb*da + B.rgb*db + C.rgb*dc) / (da + db + dc + 0.0001)
+	c := mix(base, mixed*1.04, smoothstep(0.0, 1.0, cov))
 	// A soft light through the middle, darker at the corners and the foot.
 	glow := length((uv - vec2(0.5, 0.42)) * vec2(1.0, 1.25))
 	c *= 1.16 - 0.5*smoothstep(0.15, 0.92, glow)
@@ -172,7 +177,8 @@ type backdropCache struct {
 	fadeAt time.Time  // when it began to
 	art    *artwork
 	tint   ui.Color
-	second ui.Color  // the second of the cover's colors, for the fluid
+	second ui.Color  // the cover's second color, for the fluid
+	third  ui.Color  // and its third
 	style  string    // the effect painted
 	at     time.Time // when it was painted
 	drift  float64   // the clouds' time, in seconds, which stops on pause
@@ -188,10 +194,13 @@ func (a *app) backdrop(c *ui.Context, art *artwork, tint ui.Color) {
 	style, still := a.settings.backdropStyle(), c.Preferences().ReduceMotion
 	// The second color the fluid mixes in stays the last song's while the
 	// next cover loads, as the first does.
-	second := tint
+	second, third := tint, tint
 	if art != nil && !art.failed {
 		if c := art.accent; c.R+c.G+c.B > 0 {
 			second = c
+		}
+		if c := art.third; c.R+c.G+c.B > 0 {
+			third = c
 		}
 	}
 	// The effects that move: those painted afresh as the music plays.
@@ -203,6 +212,11 @@ func (a *app) backdrop(c *ui.Context, art *artwork, tint ui.Color) {
 		div := float32(8)
 		if moves && gpu {
 			div = 2
+			if style == backdropFluid {
+				// The fluid is painted smaller still: its colors and their
+				// shadows only show as they are, smooth over one another.
+				div = 3
+			}
 		}
 		cw, ch := int(r.W/div)+1, int(r.H/div)+1
 		bd := &a.backdropCache
@@ -221,11 +235,11 @@ func (a *app) backdrop(c *ui.Context, art *artwork, tint ui.Color) {
 		moved := bd.step(now, pl.Playing() && moving, lv, live && moving)
 		due := now.Sub(bd.at) >= backdropFrame-2*time.Millisecond
 		if bd.canvas == nil || bd.art != art || bd.tint != tint || bd.second != second ||
-			bd.style != style || moved && due {
+			bd.third != third || bd.style != style || moved && due {
 			if bd.canvas == nil {
 				bd.canvas = ui.NewCanvas(cw, ch)
 			}
-			bd.art, bd.tint, bd.second, bd.style, bd.at = art, tint, second, style, now
+			bd.art, bd.tint, bd.second, bd.third, bd.style, bd.at = art, tint, second, third, style, now
 			bass := bd.level.group(0, 6)
 			bd.canvas.Draw(p, func(cp *ui.Painter) {
 				box := ui.Rect{W: float32(cw), H: float32(ch)}
@@ -233,7 +247,7 @@ func (a *app) backdrop(c *ui.Context, art *artwork, tint ui.Color) {
 				case backdropFog:
 					drawFog(cp, box, tint, float32(bd.drift), bass)
 				case backdropFluid:
-					drawFluid(cp, box, tint, second, float32(bd.drift), bass)
+					drawFluid(cp, box, tint, second, third, float32(bd.drift), bass)
 				default:
 					drawBackdrop(cp, box, art, tint)
 				}
@@ -320,35 +334,45 @@ func drawFog(p *ui.Painter, r ui.Rect, tint ui.Color, drift, bass float32) {
 	}})
 }
 
-// drawFluid paints the fluid of the cover's two colors in r at drift
-// seconds, its seam brightening with the bass.
-func drawFluid(p *ui.Painter, r ui.Rect, main, second ui.Color, drift, bass float32) {
-	a, b := fluidColors(main, second)
+// drawFluid paints the fluid of the cover's three colors in r at drift
+// seconds, its masses swelling as the bass comes.
+func drawFluid(p *ui.Painter, r ui.Rect, main, second, third ui.Color, drift, bass float32) {
+	a, b, c := fluidColors(main, second, third)
 	fluidShader().Draw(p, r, shader.Options{Uniforms: map[string]any{
-		"Time": drift, "Bass": min(bass, 1), "A": a, "B": b,
+		"Time": drift, "Bass": min(bass, 1), "A": a, "B": b, "C": c,
 	}})
 }
 
-// fluidColors returns the two colors the fluid mixes: the cover's vivid
-// color and its second, deep and rich alike so that white reads over them.
-// A cover of one hue has its second turned away, and a gray one keeps two
-// shades of gray.
-func fluidColors(main, second ui.Color) (a, b ui.Color) {
-	ha, sa, _ := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
-	hb, sb, _ := hsv(float64(second.R)/255, float64(second.G)/255, float64(second.B)/255)
-	if sa < 0.12 && sb < 0.12 {
-		// Gray: two shades of it, so that the fluid still has a shape.
-		return hsvColor(0, 0, 0.34), hsvColor(0, 0, 0.19)
+// fluidColors returns the three colors the fluid mixes: the cover's colors,
+// deep and rich alike so that white reads over them, and far enough apart in
+// hue to read as three. A cover of one hue has the others turned away from
+// it, and a gray one keeps three shades.
+func fluidColors(main, second, third ui.Color) (a, b, c ui.Color) {
+	h1, s1, _ := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
+	h2, s2, _ := hsv(float64(second.R)/255, float64(second.G)/255, float64(second.B)/255)
+	h3, s3, _ := hsv(float64(third.R)/255, float64(third.G)/255, float64(third.B)/255)
+	if s1 < 0.12 && s2 < 0.12 && s3 < 0.12 {
+		// Gray: three shades of it, so that the fluid still has a shape.
+		return hsvColor(0, 0, 0.36), hsvColor(0, 0, 0.27), hsvColor(0, 0, 0.18)
 	}
 	depth := func(s float64) float64 { return min(max(s*1.25, 0.5), 0.88) }
-	if gap := math.Abs(math.Mod(ha-hb+540, 360) - 180); gap > 140 {
-		// The same hue, or nearly: the second turns away from the first.
-		hb, sb = math.Mod(ha+150, 360), max(sb, sa*0.9)
+	// Each color turns away from the ones before it, where they share a hue.
+	if hueGap(h1, h2) < 40 {
+		h2, s2 = math.Mod(h1+140, 360), max(s2, s1*0.9)
 	}
-	if sa < 0.12 {
-		ha, sa = hb, sb
+	if hueGap(h1, h3) < 40 || hueGap(h2, h3) < 40 {
+		h3, s3 = math.Mod(h2+140, 360), max(s3, s1*0.85)
 	}
-	return hsvColor(ha, depth(sa), 0.32), hsvColor(hb, depth(sb), 0.26)
+	if s1 < 0.12 {
+		h1, s1 = h2, s2
+	}
+	return hsvColor(h1, depth(s1), 0.32), hsvColor(h2, depth(s2), 0.27), hsvColor(h3, depth(s3), 0.35)
+}
+
+// hueGap is how far apart two hues are, the short way round, in degrees.
+func hueGap(a, b float64) float64 {
+	d := math.Abs(math.Mod(a-b+540, 360) - 180)
+	return 180 - d
 }
 
 // fogColors returns the deep shade behind the fog and the fog's own for a
