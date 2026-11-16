@@ -203,14 +203,12 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 				}
 			})
 		})
-		// The effect of the backdrop, beside what plays, in every pane.
-		effects := reveal(ui.Row(c).Absolute().Top(0).Right(npSideX(w)).Height(topBar(c)).AlignItems(ui.Center), pointerIn)
-		a.npRise(effects, 0).Children(func() { a.backdropButton(c) })
 		if a.npPane == paneStage {
 			// The stage takes the whole view: the lyrics are the show, the
 			// controls a slim bar at the foot.
 			a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 				a.paneTabs(c)
+				a.backdropButton(c)
 				a.stageStyleButton(c)
 			})
 			a.stage(c, tr, accent)
@@ -230,6 +228,7 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 		padX := npSideX(w)
 		a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 			a.paneTabs(c)
+			a.backdropButton(c)
 			if a.npPane == paneLyrics {
 				a.lyricsSizeButton(c)
 			}

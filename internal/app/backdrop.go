@@ -120,41 +120,35 @@ func noise(p vec2) float {
 	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
 }
 
-func fbm(p vec2) float {
-	v := 0.0
-	amp := 0.5
-	for i := 0; i < 4; i++ {
-		v += amp * noise(p)
-		p = p*2.03 + vec2(1.7, 9.2)
-		amp *= 0.5
-	}
-	return v
+// mass blends col into c around center, in round: uv is the pixel over the
+// canvas, asp the canvas' width over its height, radius the mass' share of
+// the height. Its edge fades out slowly, which is the blur between the
+// colors.
+func mass(c vec3, col vec3, uv vec2, asp float, center vec2, radius float, strength float) vec3 {
+	d := length((uv - center) * vec2(asp, 1.0)) / radius
+	return mix(c, col, (1.0 - smoothstep(0.08, 1.0, d)) * strength)
 }
 
 func Fragment(dst vec4, pos vec2) vec4 {
 	size := rectSize()
 	uv := pos / size
-	p := pos / size.y * 1.9
-	t := Time * 0.06
-	rise := vec2(t*0.7, t*0.4)
-	// Two warped fields, so that the colors fold into one another as
-	// liquids do rather than sliding as bands.
-	q := vec2(fbm(p+rise), fbm(p+vec2(5.2, 1.3)-rise))
-	f := fbm(p + 1.5*q + vec2(0, t*0.25))
-	g := fbm(p*0.8 + 1.1*q + vec2(7.3, 2.1) - vec2(t*0.35, 0))
-	// Broad and soft: the noise itself is the blur between them.
-	w := smoothstep(0.28, 0.72, 0.5*f+0.5*g+0.1*Bass)
-	c := mix(A.rgb, B.rgb, w)
-	// A sheen along the seam where the two meet.
-	seam := w - 0.5
-	if seam < 0 {
-		seam = -seam
-	}
-	sheen := smoothstep(0.32, 0.08, seam)
-	c += (A.rgb + B.rgb) * 0.09 * sheen * (0.6 + 0.4*Bass)
-	// Darker at the corners, and toward the foot under the controls.
+	asp := size.x / size.y
+	t := Time * 0.25
+	// The whole field drifts through noise of its own, so that the masses
+	// churn and their edges fold as liquids do, rather than sliding whole.
+	warp := vec2(noise(uv*2.2+vec2(t*0.35, 0))-0.5, noise(uv*2.2+vec2(4.7, 1.3)-vec2(0, t*0.3))-0.5)
+	p := uv + warp*0.17
+	// The two colors folded into a deep base, drifting between them.
+	c := mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)) * 0.8
+	// Round masses of them, each on a slow loop of its own, breathing as
+	// the bass comes.
+	breath := 1.0 + 0.03*sin(t*0.9) + 0.07*Bass
+	c = mass(c, A.rgb, p, asp, vec2(0.34+0.16*sin(t*0.7), 0.40+0.13*sin(t*1.1+1.3)), 0.50*breath, 0.95)
+	c = mass(c, B.rgb, p, asp, vec2(0.68+0.14*sin(t*0.9+2.1), 0.52+0.15*sin(t*0.6+0.4)), 0.46*breath, 0.9)
+	c = mass(c, mix(A.rgb, B.rgb, 0.5), p, asp, vec2(0.50+0.20*sin(t*0.5+4.2), 0.74+0.10*sin(t*0.8+2.7)), 0.42*breath, 0.7)
+	// A soft light through the middle, darker at the corners and the foot.
 	glow := length((uv - vec2(0.5, 0.42)) * vec2(1.0, 1.25))
-	c *= 1.14 - 0.52*smoothstep(0.15, 0.92, glow)
+	c *= 1.16 - 0.5*smoothstep(0.15, 0.92, glow)
 	c = mix(c, c*0.6, smoothstep(0.6, 1.0, uv.y))
 	return vec4(c, 1)
 }
