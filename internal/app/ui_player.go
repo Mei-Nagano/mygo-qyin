@@ -317,39 +317,6 @@ func (a *app) muteButton(c *ui.Context, color ui.Color, surface ...buttonSurface
 	}
 }
 
-// volumeSlider is a slim slider with the speaker before it, which mutes.
-// The row keeps its own content width (Shrink(0), fixed slider): a parent
-// row can only center what does not stretch.
-func (a *app) volumeSlider(c *ui.Context, color, track ui.Color, width float32, surface ...buttonSurface) {
-	ui.Row(c).Gap(4).Shrink(0).AlignItems(ui.Center).Children(func() {
-		a.muteButton(c, color, surface...)
-		s := ui.SliderBase(c.Key("volume"), &a.volume, 0, 1).Width(width).Height(16).FocusRing(false).Label("音量").Cursor(ui.CursorPointer)
-		if s.Changed() {
-			a.pl.SetVolume(a.volume)
-		}
-		hot := s.Hovered() || s.Pressed() || s.FocusVisible()
-		thick, knob, fill := float32(4), float32(0), color
-		if hot {
-			thick, knob, fill = 5, 1, color.Alpha(1)
-		}
-		motion := ui.Animation{Duration: 140 * time.Millisecond}
-		thick = s.AnimateTo("thick", thick, motion)
-		knob = s.AnimateTo("knob", knob, motion)
-		fill = s.AnimateColor("fill", fill, motion)
-		v := float32(a.volume)
-		s.Draw(func(p *ui.Painter, r ui.Rect) {
-			y := r.Y + (r.H-thick)/2
-			p.Fill(ui.Rect{X: r.X, Y: y, W: r.W, H: thick}, track, thick/2)
-			p.Fill(ui.Rect{X: r.X, Y: y, W: max(thick, r.W*v), H: thick}, fill, thick/2)
-			if knob > 0.01 {
-				k := 10 * knob
-				x := r.X + r.W*v
-				p.Fill(ui.Rect{X: x - k/2, Y: r.Y + (r.H-k)/2, W: k, H: k}, fill, k/2)
-			}
-		})
-	})
-}
-
 // transport is the row of controls: shuffle, previous, play, next, repeat.
 func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, surface ...buttonSurface) {
 	pl := a.pl

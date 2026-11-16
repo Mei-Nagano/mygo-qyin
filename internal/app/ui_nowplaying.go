@@ -208,7 +208,6 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 			// controls a slim bar at the foot.
 			a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 				a.paneTabs(c)
-				a.backdropButton(c)
 				a.stageStyleButton(c)
 			})
 			a.stage(c, tr, accent)
@@ -228,7 +227,6 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 		padX := npSideX(w)
 		a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 			a.paneTabs(c)
-			a.backdropButton(c)
 			if a.npPane == paneLyrics {
 				a.lyricsSizeButton(c)
 			}
@@ -264,9 +262,6 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 				})
 				a.npRise(ui.Box(c).Margin(14, 0, 18, 0), 3).Children(func() {
 					a.transport(c, white, white.Alpha(0.45), accent, 28, mediaSurface)
-				})
-				a.npRise(ui.Row(c).Justify(ui.Center), 4).Children(func() {
-					a.volumeSlider(c, white.Alpha(0.7), white.Alpha(0.18), 180, mediaSurface)
 				})
 			})
 
@@ -400,6 +395,10 @@ func (a *app) paneTabs(c *ui.Context) {
 			label = a.commentsTab()
 		}
 		a.paneTab(c, t.pane, label)
+		if t.pane == paneLyrics {
+			// The backdrop's effect, beside the lyrics it shows behind.
+			a.backdropButton(c)
+		}
 	}
 }
 

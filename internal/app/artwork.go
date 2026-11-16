@@ -408,10 +408,18 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 	var area [buckets]int
 	var sum [buckets][3]float64
 	var gray [3]float64
+	// paper is the cover's pale, near-neutral field, as white paper is: it
+	// counts by area, where colors count by how vivid they are.
+	var paper [3]float64
+	var paperArea int
 	for i := 0; i < len(small.Pix); i += 4 {
 		r, g, b := float64(small.Pix[i])/255, float64(small.Pix[i+1])/255, float64(small.Pix[i+2])/255
 		h, s, v := hsv(r, g, b)
 		gray[0], gray[1], gray[2] = gray[0]+r, gray[1]+g, gray[2]+b
+		if s < 0.15 && v >= 0.72 {
+			paper[0], paper[1], paper[2] = paper[0]+r, paper[1]+g, paper[2]+b
+			paperArea++
+		}
 		// Saturation and brightness both, brightness twice: a bright area
 		// reads as the cover's color even where a duller one covers more of
 		// it, and where a pale one covers most of it, the pale one is the
@@ -441,6 +449,14 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 	colorOf := func(k int) ui.Color {
 		w := weight[k]
 		return ui.RGB(uint8(sum[k][0]/w*255), uint8(sum[k][1]/w*255), uint8(sum[k][2]/w*255))
+	}
+	// A cover of white or cream paper says more with its pale field than with
+	// the few vivid things printed on it: that field is its color, and what is
+	// printed on it the second.
+	if paperArea > len(small.Pix)/4*2/5 {
+		n := float64(paperArea)
+		paperColor := ui.RGB(uint8(paper[0]/n*255), uint8(paper[1]/n*255), uint8(paper[2]/n*255))
+		return paperColor, colorOf(best)
 	}
 	main = colorOf(best)
 	// The hue farthest from it that still covers some of the cover; where no

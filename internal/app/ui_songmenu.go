@@ -18,13 +18,14 @@ func (a *app) songMenu(c *ui.Context, tr *qqmusic.Track, size float32, color ui.
 	return a.songMenuItems(c, a.songItems(tr, 0), size, color, surface...)
 }
 
-// nowPlayingMenu is the dots of the page playing tr: its menu, and the level
-// of the streams asked for, changed as it plays.
+// nowPlayingMenu is the dots of the page playing tr: its menu, the level of
+// the streams asked for, and the volume, changed as it plays.
 func (a *app) nowPlayingMenu(c *ui.Context, tr *qqmusic.Track, size float32, color ui.Color, surface ...buttonSurface) ui.Element {
 	return a.songMenuItems(c, func(m *ui.Menu) {
 		a.songItems(tr, 0)(m)
 		m.Separator()
 		a.qualityItems(m)
+		a.volumeItem(m)
 	}, size, color, surface...)
 }
 
@@ -50,6 +51,50 @@ func (a *app) qualityItems(m *ui.Menu) {
 		}
 	})
 	it.Trailing(qualityName(a.settings.Quality))
+}
+
+// volumeItem puts the volume in the menu, as a slider over it: the player's
+// own row keeps only the songs and their controls.
+func (a *app) volumeItem(m *ui.Menu) {
+	m.Item("音量").Content(func(content ui.MenuItemContent) {
+		c := content.Context
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			icon := iconVolume
+			if a.volume == 0 {
+				icon = iconMute
+			}
+			mute := ui.ButtonBase(c.Key("menu-mute")).Size(20, 20).Center().Radius(999).
+				FocusRing(false).Label("静音").Tooltip("静音").TextColor(content.Muted)
+			mute.Children(func() { ui.Icon(c, icon).Size(15, 15) })
+			if mute.Clicked() {
+				if a.volume > 0 {
+					a.mutedFrom, a.volume = a.volume, 0
+				} else {
+					a.volume = max(a.mutedFrom, 0.5)
+				}
+				a.pl.SetVolume(a.volume)
+				a.settings.Volume = a.volume
+				a.settings.save()
+			}
+			s := ui.SliderBase(c.Key("menu-volume"), &a.volume, 0, 1).Width(112).Height(14).
+				FocusRing(false).Label("音量").Cursor(ui.CursorPointer)
+			if s.Changed() {
+				a.pl.SetVolume(a.volume)
+				a.settings.Volume = a.volume
+				a.settings.save()
+			}
+			thick, fill := float32(4), content.Text
+			if s.Hovered() || s.Pressed() || s.FocusVisible() {
+				thick = 5
+			}
+			v := float32(a.volume)
+			s.Draw(func(p *ui.Painter, r ui.Rect) {
+				y := r.Y + (r.H-thick)/2
+				p.Fill(ui.Rect{X: r.X, Y: y, W: r.W, H: thick}, content.Muted.Alpha(0.35), thick/2)
+				p.Fill(ui.Rect{X: r.X, Y: y, W: max(thick, r.W*v), H: thick}, fill, thick/2)
+			})
+		})
+	})
 }
 
 // qualityName is a level of streams named shortly, without its detail.

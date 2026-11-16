@@ -124,10 +124,7 @@ func (a *app) wallPane(c *ui.Context, tr *qqmusic.Track, art *artwork, accent ui
 		})
 	a.wallSong(c, tr, art, top, songH)
 	a.wallBar(c, accent)
-	a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
-		a.paneTabs(c)
-		a.backdropButton(c)
-	})
+	a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() { a.paneTabs(c) })
 }
 
 // wallSong is the song playing, over the wall: its cover, which breathes

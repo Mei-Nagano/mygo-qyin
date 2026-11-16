@@ -352,15 +352,16 @@ func drawFluid(p *ui.Painter, r ui.Rect, main, second ui.Color, drift, bass floa
 func fluidColors(main, second ui.Color) (a, b ui.Color) {
 	h1, s1, _ := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
 	h2, s2, _ := hsv(float64(second.R)/255, float64(second.G)/255, float64(second.B)/255)
-	if s1 < 0.12 && s2 < 0.12 {
-		// Gray: two shades of it, so that the fluid still has a shape.
-		return hsvColor(0, 0, 0.38), hsvColor(0, 0, 0.17)
-	}
 	// Deep enough for white to read over, and no more saturated than the
 	// cover's own color: a pale cover turns a quiet gray, not a rich brown.
 	depth := func(s float64) float64 { return min(max(s*0.95, 0.15), 0.85) }
-	if s1 < 0.12 {
-		h1, s1 = h2, s2
+	switch {
+	case s1 < 0.12 && s2 < 0.12:
+		// Gray: two shades of it, so that the fluid still has a shape.
+		return hsvColor(0, 0, 0.38), hsvColor(0, 0, 0.17)
+	case s1 < 0.12:
+		// Paper: the cover's own quiet gray, and the color printed on it.
+		return hsvColor(h1, min(s1*1.5, 0.10), 0.31), hsvColor(h2, depth(s2), 0.23)
 	}
 	if hueGap(h1, h2) < 40 {
 		// The cover holds one hue: its two colors are that hue light and
