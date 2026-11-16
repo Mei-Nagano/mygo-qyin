@@ -342,8 +342,8 @@ func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, vo
 
 // playOrderButton is one button for the order the queue plays in, pressed to
 // move on to the next: in order, then round again, then one song round again,
-// then shuffled. Like the shuffle and repeat buttons it stood in for, it is
-// dim while the order is plain and takes the accent when it is not.
+// then shuffled. As the shuffle and repeat buttons it stands in for, it is
+// dim while the order is plain and takes the accent while it is not.
 func (a *app) playOrderButton(c *ui.Context, dim, on ui.Color, size float32, surface ...buttonSurface) {
 	pl := a.pl
 	icon, label, lit := iconOrder, "顺序播放", false
