@@ -140,12 +140,17 @@ func Fragment(dst vec4, pos vec2) vec4 {
 	p := uv + warp*0.34
 	// The two colors folded into a deep base, drifting between them.
 	base := mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)) * 0.8
-	// Each color takes a mass far larger than the view, its center near a
-	// corner: their edges fall outside the frame, so what shows is fields of
-	// color meeting and folding, never a ball. They breathe as the bass comes.
+	// Each color takes a mass far larger than the view, so that its edges
+	// fall outside the frame and what shows is fields of color meeting and
+	// folding, never a ball. The two turn about the middle, keeping to
+	// opposite sides but slowly trading them, and breathe as the bass comes.
 	breath := 1.0 + 0.03*sin(t*0.8) + 0.06*Bass
-	da := density(p, asp, vec2(0.20+0.12*sin(t*0.6), 0.26+0.10*sin(t*0.9+1.3)), 1.30*breath)
-	db := density(p, asp, vec2(0.80+0.12*sin(t*0.7+2.1), 0.74+0.11*sin(t*0.5+0.6)), 1.20*breath)
+	turn := t*0.5 + 0.6*sin(t*0.31)
+	away := turn + 3.1416 + 0.35*sin(t*0.23)
+	ca := vec2(0.5+0.46*cos(turn), 0.5+0.42*sin(turn))
+	cb := vec2(0.5+0.46*cos(away), 0.5+0.42*sin(away))
+	da := density(p, asp, ca, 1.30*breath)
+	db := density(p, asp, cb, 1.18*breath)
 	cov := 1.0 - (1.0-da)*(1.0-db)
 	mixed := (A.rgb*da + B.rgb*db) / (da + db + 0.0001)
 	c := mix(base, mixed*1.04, smoothstep(0.0, 1.0, cov))

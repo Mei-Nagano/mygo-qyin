@@ -409,7 +409,9 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 		r, g, b := float64(small.Pix[i])/255, float64(small.Pix[i+1])/255, float64(small.Pix[i+2])/255
 		h, s, v := hsv(r, g, b)
 		gray[0], gray[1], gray[2] = gray[0]+r, gray[1]+g, gray[2]+b
-		w := s * s * v
+		// Saturation and brightness both: a bright, vivid area reads as the
+		// cover's color even where a duller one covers more of it.
+		w := s * v * v
 		if s < 0.15 || v < 0.15 {
 			continue
 		}
@@ -436,7 +438,7 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 	// The hue farthest from it that still covers some of the cover.
 	second, far := main, 0.0
 	for k := range weight {
-		if k == best || weight[k] < weight[best]*0.12 {
+		if k == best || weight[k] < weight[best]*0.20 {
 			continue
 		}
 		if gap := hueBucketGap(k, best, buckets); gap > far {
