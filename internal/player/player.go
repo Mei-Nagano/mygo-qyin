@@ -190,6 +190,46 @@ func (p *Player) PlayNext(t qqmusic.Track) {
 	p.sync()
 }
 
+// Remove takes the queue's track i out of the queue. Where it was the one
+// playing, what follows it plays in its place; where nothing is left, nothing
+// plays.
+func (p *Player) Remove(i int) {
+	if i < 0 || i >= len(p.queue) {
+		return
+	}
+	pos := -1
+	for k, v := range p.order {
+		if v == i {
+			pos = k
+			break
+		}
+	}
+	p.queue = slices.Delete(p.queue, i, i+1)
+	if pos < 0 {
+		p.sync()
+		return
+	}
+	p.order = slices.Delete(p.order, pos, pos+1)
+	for k, v := range p.order {
+		if v > i {
+			p.order[k] = v - 1
+		}
+	}
+	switch {
+	case len(p.order) == 0:
+		p.stop()
+		p.queue, p.order, p.at, p.track = nil, nil, -1, nil
+		p.lyrics, p.lyricsLoaded, p.instrumental = nil, false, false
+		p.sync()
+	case pos < p.at:
+		p.at--
+		p.sync()
+	case pos == p.at:
+		// What followed it takes its place, or the last of the queue does.
+		p.load(min(pos, len(p.order)-1))
+	}
+}
+
 // PlayRadio plays tracks in their order, then goes on with those feed
 // gives as the queue nears its end, until something else is played. The
 // radio's name says which it is. feed calls got on the main thread.

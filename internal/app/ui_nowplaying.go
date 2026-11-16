@@ -838,6 +838,19 @@ func (a *app) queuePane(c *ui.Context) {
 	}).Padding(8, 0, 40, 0)
 }
 
+// queueItems is the menu of a row of the queue: what a song's own menu
+// offers, and taking it out of the queue.
+func (a *app) queueItems(tr *qqmusic.Track, i int) func(m *ui.Menu) {
+	return func(m *ui.Menu) {
+		a.songItems(tr, 0)(m)
+		m.Separator()
+		if m.Item("从待播清单移除").Chosen() {
+			a.pl.Remove(i)
+			a.toast = "已从待播清单移除"
+		}
+	}
+}
+
 // queueTracks shares playback and menus between the page and its floating queue.
 func (a *app) queueTracks(c *ui.Context, list *ui.ListState, lastAt *int, p palette) ui.Element {
 	pl := a.pl
@@ -858,7 +871,7 @@ func (a *app) queueTracks(c *ui.Context, list *ui.ListState, lastAt *int, p pale
 		tr := &pl.Queue()[i]
 		playing := r == at
 		row := ui.ButtonBase(c.Key(i)).Height(58).PaddingX(10).Gap(14).Radius(12).AlignItems(ui.Center).FocusRing(false).Label(tr.Name).
-			ContextMenu(a.songItems(tr, 0))
+			ContextMenu(a.queueItems(tr, i))
 		switch {
 		case playing:
 			row.Background(p.press)

@@ -85,6 +85,10 @@ func (a *app) likedPlaylistPage(c *ui.Context, id int64) {
 				r.tab = tab
 				a.show(r)
 			}
+			if a.route.tab == 0 {
+				ui.Box(c).Grow(1)
+				a.playlistSearchField(c, id)
+			}
 		})
 	}
 	if a.route.tab == 1 {
@@ -124,7 +128,7 @@ func (a *app) likedPlaylistPage(c *ui.Context, id int64) {
 		}
 		return
 	}
-	a.trackRowsWithKey(c, content, &a.likedScroll.songs, pl.Tracks, true, header)
+	a.trackRowsWithKey(c, content, &a.likedScroll.songs, filterTracks(pl.Tracks, a.playlistFilter(id).text), true, header)
 }
 
 func (a *app) likedCollectionHeader(c *ui.Context, id int64) {

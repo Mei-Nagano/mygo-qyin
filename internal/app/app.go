@@ -126,8 +126,10 @@ type app struct {
 
 	mineCollapsed, savedCollapsed bool
 
-	query         string
-	searchBox     ui.Handle
+	query     string
+	searchBox ui.Handle
+	// plSearch keeps what each playlist page searched for among its songs.
+	plSearch      map[int64]*playlistSearch
 	historyScroll ui.ScrollState
 	searches      map[route]*searchData // the results of each search, by its page
 	searched      route                 // the search last shown, which the sidebar goes back to

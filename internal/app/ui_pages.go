@@ -262,7 +262,9 @@ func (a *app) playlistPage(c *ui.Context) {
 		a.trackSkeleton(c, s, true, func(c *ui.Context) { a.playlistHeaderSkeleton(c, s) })
 		return
 	}
-	a.trackRows(c, pl.Tracks, true, func(c *ui.Context) { a.playlistHeader(c, pl) })
+	a.trackRows(c, filterTracks(pl.Tracks, a.playlistFilter(id).text), true, func(c *ui.Context) {
+		a.playlistHeader(c, pl)
+	})
 }
 
 func (a *app) playlistHeader(c *ui.Context, pl *qqmusic.Playlist) {
@@ -292,6 +294,8 @@ func (a *app) playlistHeader(c *ui.Context, pl *qqmusic.Playlist) {
 			}
 			a.pl.PlayQueue(pl.Tracks, firstPlayable(pl.Tracks))
 		}
+		ui.Box(c).Grow(1)
+		a.playlistSearchField(c, pl.ID)
 		if mine := a.editable(pl.ID); mine != nil {
 			more := iconButton(c.Key("more"), iconMore, 18, p.muted, "更多")
 			more.Menu(func(m *ui.Menu) {
@@ -328,6 +332,57 @@ func (a *app) collectionHeader(c *ui.Context, pl *qqmusic.Playlist, kind, meta s
 			a.collectionDescription(c, pl.Description)
 			ui.Row(c).Height(36).Gap(10).Margin(10, 0, 0, 0).Children(actions)
 		})
+	})
+}
+
+// playlistSearch is what the page of a playlist searched for among its songs.
+type playlistSearch struct{ text string }
+
+// playlistFilter is what the page of playlist id searched for, made once.
+func (a *app) playlistFilter(id int64) *playlistSearch {
+	if a.plSearch == nil {
+		a.plSearch = map[int64]*playlistSearch{}
+	}
+	f := a.plSearch[id]
+	if f == nil {
+		f = &playlistSearch{}
+		a.plSearch[id] = f
+	}
+	return f
+}
+
+// filterTracks keeps the tracks whose name, artists or album hold q, in
+// either case.
+func filterTracks(tracks []qqmusic.Track, q string) []qqmusic.Track {
+	q = strings.ToLower(strings.TrimSpace(q))
+	if q == "" {
+		return tracks
+	}
+	kept := make([]qqmusic.Track, 0, len(tracks))
+	for _, t := range tracks {
+		if strings.Contains(strings.ToLower(t.Name), q) ||
+			strings.Contains(strings.ToLower(t.ArtistNames()), q) ||
+			strings.Contains(strings.ToLower(t.Album.Name), q) {
+			kept = append(kept, t)
+		}
+	}
+	return kept
+}
+
+// playlistSearchField searches a playlist's own songs as it is typed. It
+// sits beside the playlist's name, where its other actions are.
+func (a *app) playlistSearchField(c *ui.Context, id int64) {
+	p := a.pal
+	f := a.playlistFilter(id)
+	field := ui.Row(c).Width(220).Height(32).PaddingX(10).Gap(7).Radius(9).AlignItems(ui.Center).
+		Background(p.hover).Border(1, p.hairline)
+	field.Children(func() {
+		ui.Icon(c, iconSearch).Size(14, 14).TextColor(p.muted)
+		ui.TextInputBase(c.Key("pl-search"), &f.text).Grow(1).MinWidth(0).
+			Placeholder("在此歌单中搜索").FontSize(13).Label("在此歌单中搜索")
+		if f.text != "" && iconButton(c.Key("pl-clear"), iconX, 12, p.muted, "清除搜索").Clicked() {
+			f.text = ""
+		}
 	})
 }
 

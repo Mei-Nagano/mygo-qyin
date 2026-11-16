@@ -400,7 +400,9 @@ func dominantColor(img image.Image) ui.Color {
 // hue to read as another: the two the fluid backdrop mixes. A cover of one
 // hue answers the same color twice, which the backdrop sets apart by depth.
 func dominantColors(img image.Image) (main, second ui.Color) {
-	small := shrink(img, 24)
+	// Fine enough that lettering and small emblems keep their own hue rather
+	// than blend into what surrounds them.
+	small := shrink(img, 48)
 	const buckets = 18
 	var weight [buckets]float64
 	var area [buckets]int
@@ -441,10 +443,9 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 		return ui.RGB(uint8(sum[k][0]/w*255), uint8(sum[k][1]/w*255), uint8(sum[k][2]/w*255))
 	}
 	main = colorOf(best)
-	// The hue farthest from it that still covers some of the cover, and far
-	// enough that the two read as two colors: a near hue would look like the
-	// same color spread thin. Where the cover has no such hue, the second
-	// turns away from the first instead.
+	// The hue farthest from it that still covers some of the cover; where no
+	// other hue covers enough, it answers its own color again, which the
+	// backdrop sets apart by depth.
 	second, far := main, 0.0
 	for k := range weight {
 		if k == best || weight[k] < weight[best]*0.2 {
@@ -454,10 +455,10 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 			second, far = colorOf(k), gap
 		}
 	}
-	if far < 80 {
-		// The cover holds one hue only: its second color is that same hue,
-		// which the backdrop sets apart by depth. Turning to a hue the cover
-		// never had would paint with colors of its own invention.
+	if far <= 0 {
+		// The cover holds one hue only: it answers that same color, which
+		// the backdrop sets apart by depth. Turning to a hue the cover never
+		// had would paint with colors of its own invention.
 		return main, main
 	}
 	return main, second
