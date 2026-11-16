@@ -318,16 +318,13 @@ func (a *app) muteButton(c *ui.Context, color ui.Color, surface ...buttonSurface
 }
 
 // transport is the row of controls: shuffle, previous, play, next, repeat.
-func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, surface ...buttonSurface) {
+// transport is the row of controls: the order the queue plays in, the songs
+// either side of this one, and, where volume is set, the speaker that opens
+// the volume.
+func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, volume bool, surface ...buttonSurface) {
 	pl := a.pl
 	ui.Row(c).Gap(size * 0.5).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
-		shuffle := dim
-		if pl.Shuffle() {
-			shuffle = on
-		}
-		if iconButton(c.Key("shuffle"), iconShuffle, size*0.62, shuffle, "随机播放", surface...).Clicked() {
-			pl.ToggleShuffle()
-		}
+		a.playOrderButton(c, dim, on, size*0.62, surface...)
 		if iconButton(c.Key("prev"), iconPrev, size*0.85, color, "上一首", surface...).Clicked() {
 			pl.Prev()
 		}
@@ -337,17 +334,66 @@ func (a *app) transport(c *ui.Context, color, dim, on ui.Color, size float32, su
 		if iconButton(c.Key("next"), iconNext, size*0.85, color, "下一首", surface...).Clicked() {
 			pl.Next()
 		}
-		repeat, ricon := dim, iconRepeat
-		switch pl.Repeat() {
-		case player.RepeatAll:
-			repeat = on
-		case player.RepeatOne:
-			repeat, ricon = on, iconRepeat1
-		}
-		if iconButton(c.Key("repeat"), ricon, size*0.62, repeat, "循环", surface...).Clicked() {
-			pl.CycleRepeat()
+		if volume {
+			a.volumeButton(c, dim)
 		}
 	})
+}
+
+// playOrderButton is one button for the order the queue plays in, pressed to
+// move on to the next: in order, then round again, then one song round again,
+// then shuffled.
+func (a *app) playOrderButton(c *ui.Context, dim, on ui.Color, size float32, surface ...buttonSurface) {
+	pl := a.pl
+	icon, label, lit := iconOrder, "顺序播放", false
+	switch {
+	case pl.Shuffle():
+		icon, label, lit = iconShuffle, "随机播放", true
+	case pl.Repeat() == player.RepeatAll:
+		icon, label, lit = iconRepeat, "列表循环", true
+	case pl.Repeat() == player.RepeatOne:
+		icon, label, lit = iconRepeat1, "单曲循环", true
+	}
+	if iconButton(c.Key("play-order"), icon, size, dim, label, surface...).TextColor(litColor(lit, dim, on)).
+		Clicked() {
+		a.cyclePlayOrder()
+	}
+}
+
+// litColor takes color c where lit, else dim.
+func litColor(lit bool, dim, c ui.Color) ui.Color {
+	if lit {
+		return c
+	}
+	return dim
+}
+
+// cyclePlayOrder moves to the next order: in order, round again, one song
+// round again, shuffled.
+func (a *app) cyclePlayOrder() {
+	pl := a.pl
+	switch {
+	case pl.Shuffle():
+		pl.ToggleShuffle()
+		a.setRepeat(player.RepeatOff)
+	case pl.Repeat() == player.RepeatOff:
+		a.setRepeat(player.RepeatAll)
+	case pl.Repeat() == player.RepeatAll:
+		a.setRepeat(player.RepeatOne)
+	default:
+		a.setRepeat(player.RepeatOff)
+		pl.ToggleShuffle()
+	}
+}
+
+// setRepeat moves the repeat on to mode, through the modes between.
+func (a *app) setRepeat(mode player.RepeatMode) {
+	for range 4 {
+		if a.pl.Repeat() == mode {
+			return
+		}
+		a.pl.CycleRepeat()
+	}
 }
 
 // playerBar runs along the foot of the content: what plays, its controls
@@ -432,7 +478,7 @@ func (a *app) playerBar(c *ui.Context) {
 
 		// Controls over the progress.
 		ui.Column(c).Width(440).Shrink(1).MinWidth(300).Gap(0).AlignItems(ui.Stretch).Children(func() {
-			a.transport(c, p.text, p.muted, p.accent, 18, playerSurface)
+			a.transport(c, p.text, p.muted, p.accent, 18, false, playerSurface)
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Margin(-4, 0, 0, 0).Children(func() {
 				ui.Text(c, clock(pl.Position())).FontSize(10.5).FontFeatures("tnum").TextColor(p.faint).Width(34).TextAlign(ui.End)
 				a.scrubber(c.Key("bar-scrub"), &a.barScrub, p.press, p.text.Alpha(0.75), 14, p.accent).Grow(1)

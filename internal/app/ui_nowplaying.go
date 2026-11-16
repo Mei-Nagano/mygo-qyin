@@ -208,6 +208,7 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 			// controls a slim bar at the foot.
 			a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 				a.paneTabs(c)
+				a.backdropButton(c)
 				a.stageStyleButton(c)
 			})
 			a.stage(c, tr, accent)
@@ -227,6 +228,7 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 		padX := npSideX(w)
 		a.npRise(reveal(npTabsRow(c, w, h), pointerIn), 0).Children(func() {
 			a.paneTabs(c)
+			a.backdropButton(c)
 			if a.npPane == paneLyrics {
 				a.lyricsSizeButton(c)
 			}
@@ -261,12 +263,7 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 					ui.Text(c, status).FontSize(11).FontFeatures("tnum").TextColor(white.Alpha(0.5))
 				})
 				a.npRise(ui.Box(c).Margin(14, 0, 18, 0), 3).Children(func() {
-					a.transport(c, white, white.Alpha(0.45), accent, 28, mediaSurface)
-				})
-				// The volume, as the speaker that opens it: the row keeps the
-				// songs and their controls alone.
-				a.npRise(ui.Row(c).Justify(ui.Center).Margin(10, 0, 0, 0), 4).Children(func() {
-					a.volumeButton(c, white.Alpha(0.6))
+					a.transport(c, white, white.Alpha(0.45), accent, 28, true, mediaSurface)
 				})
 			})
 
@@ -400,10 +397,6 @@ func (a *app) paneTabs(c *ui.Context) {
 			label = a.commentsTab()
 		}
 		a.paneTab(c, t.pane, label)
-		if t.pane == paneLyrics {
-			// The backdrop's effect, beside the lyrics it shows behind.
-			a.backdropButton(c)
-		}
 	}
 }
 
@@ -471,7 +464,7 @@ func (a *app) stageBar(c *ui.Context, tr *qqmusic.Track, art *artwork, accent ui
 					a.nowPlayingMenu(c.Key("more"), tr, 17, white.Alpha(0.6), mediaSurface).Margin(0, 0, 0, -10)
 				})
 			})
-			a.npRise(ui.Row(c), 3).Children(func() { a.transport(c, white, white.Alpha(0.45), white, 22, mediaSurface) })
+			a.npRise(ui.Row(c), 3).Children(func() { a.transport(c, white, white.Alpha(0.45), white, 22, true, mediaSurface) })
 			a.npRise(ui.Row(c).Grow(1).Basis(0).MinWidth(0).Justify(ui.End), 4).Children(func() {
 				ui.Text(c, clock(pl.Position())+" / "+clock(pl.Duration())).FontSize(11.5).FontFeatures("tnum").TextColor(white.Alpha(0.5))
 			})
