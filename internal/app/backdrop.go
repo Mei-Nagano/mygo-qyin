@@ -346,25 +346,26 @@ func drawFluid(p *ui.Painter, r ui.Rect, main, second ui.Color, drift, bass floa
 }
 
 // fluidColors returns the two colors the fluid mixes: the cover's vivid
-// color and its second, deep and rich alike so that white reads over them.
-// A cover of one hue has its second turned away, and a gray one keeps two
-// shades of gray.
+// color and a second one far enough from it, in hue and in depth, to read as
+// another color beside it, whatever the cover answered. Both are deep and
+// rich alike so that white reads over them; a gray cover keeps two shades.
 func fluidColors(main, second ui.Color) (a, b ui.Color) {
 	h1, s1, _ := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
 	h2, s2, _ := hsv(float64(second.R)/255, float64(second.G)/255, float64(second.B)/255)
 	if s1 < 0.12 && s2 < 0.12 {
 		// Gray: two shades of it, so that the fluid still has a shape.
-		return hsvColor(0, 0, 0.35), hsvColor(0, 0, 0.21)
+		return hsvColor(0, 0, 0.38), hsvColor(0, 0, 0.17)
 	}
 	depth := func(s float64) float64 { return min(max(s*1.25, 0.5), 0.88) }
-	if hueGap(h1, h2) < 40 {
-		// The same hue, or nearly: the second turns away from the first.
-		h2, s2 = math.Mod(h1+150, 360), max(s2, s1*0.9)
-	}
 	if s1 < 0.12 {
 		h1, s1 = h2, s2
 	}
-	return hsvColor(h1, depth(s1), 0.32), hsvColor(h2, depth(s2), 0.26)
+	// Near hues look like one color spread thin: the second turns away from
+	// the first rather than sit beside it.
+	if hueGap(h1, h2) < 90 {
+		h2, s2 = math.Mod(h1+150, 360), max(s2, s1)
+	}
+	return hsvColor(h1, depth(s1), 0.34), hsvColor(h2, depth(s2), 0.23)
 }
 
 // hueGap is how far apart two hues are, the short way round, in degrees.
