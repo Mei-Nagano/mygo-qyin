@@ -23,22 +23,26 @@ import (
 // derives from it: its color, and a blurred copy to fill a backdrop.
 type artwork struct {
 	bmp      *ui.Bitmap
-	backdrop *ui.Bitmap
-	tint     ui.Color // the cover's most vivid color
-	data     []byte   // the same encoded data the bitmap keeps to restore its pixels
-	ready    artNeeds // which derived resources have been made
+	backdrop *ui.Bitmap // blurred hard, filling a backdrop
+	soft     *ui.Bitmap // blurred lightly, under a day's own date
+	tint     ui.Color   // the cover's most vivid color
+	accent   ui.Color   // a second one, far from it in hue
+	data     []byte     // the same encoded data the bitmap keeps to restore its pixels
+	ready    artNeeds   // which derived resources have been made
 	failed   bool
 	used     time.Time // when it was last asked for
-	size     int       // the bytes it keeps: its data, and the backdrop's pixels
+	size     int       // the bytes it keeps: its data, and the blurred copies' pixels
 }
 
 type artNeeds uint8
 
 const (
-	artCover    artNeeds = 0
-	artTint     artNeeds = 1
-	artBlur     artNeeds = 2
-	artBackdrop          = artTint | artBlur
+	artCover     artNeeds = 0
+	artTint      artNeeds = 1
+	artBlur      artNeeds = 2
+	artSoftness  artNeeds = 4
+	artBackdrop           = artTint | artBlur
+	artSoftCover          = artTint | artSoftness
 )
 
 // A request's needs can grow while its worker runs; only the main thread
@@ -202,10 +206,13 @@ func (c *artCache) load(url string, a *artwork, need artNeeds) {
 				c.release(a.bmp)
 			} else {
 				if need&artTint != 0 {
-					a.tint = result.tint
+					a.tint, a.accent = result.tint, result.accent
 				}
 				if need&artBlur != 0 {
 					a.backdrop = result.backdrop
+				}
+				if need&artSoftness != 0 {
+					a.soft = result.soft
 				}
 				a.ready |= need
 				a.size += result.size
@@ -258,12 +265,17 @@ func deriveArt(data []byte, need artNeeds) (*artwork, error) {
 		return nil, err
 	}
 	if need&artTint != 0 {
-		a.tint = dominantColor(img)
+		a.tint, a.accent = dominantColors(img)
 	}
 	if need&artBlur != 0 {
 		blurred := blurImage(img)
 		a.backdrop = ui.NewBitmap(blurred)
-		a.size = len(blurred.Pix)
+		a.size += len(blurred.Pix)
+	}
+	if need&artSoftness != 0 {
+		soft := blurSoft(img)
+		a.soft = ui.NewBitmap(soft)
+		a.size += len(soft.Pix)
 	}
 	return a, nil
 }
@@ -380,6 +392,14 @@ func shrink(img image.Image, n int) *image.RGBA {
 // dominantColor returns the most vivid color that covers much of img: the
 // hue that its saturated pixels share most, at their mean.
 func dominantColor(img image.Image) ui.Color {
+	main, _ := dominantColors(img)
+	return main
+}
+
+// dominantColors returns that color, and a second one far enough from it in
+// hue to read as another: the two the fluid backdrop mixes. A cover of one
+// hue answers the same color twice, which the backdrop then turns apart.
+func dominantColors(img image.Image) (main, second ui.Color) {
 	small := shrink(img, 24)
 	const buckets = 18
 	var weight [buckets]float64
@@ -405,10 +425,32 @@ func dominantColor(img image.Image) ui.Color {
 	}
 	if weight[best] < 2 {
 		n := float64(len(small.Pix) / 4)
-		return ui.RGB(uint8(gray[0]/n*255), uint8(gray[1]/n*255), uint8(gray[2]/n*255))
+		grayColor := ui.RGB(uint8(gray[0]/n*255), uint8(gray[1]/n*255), uint8(gray[2]/n*255))
+		return grayColor, grayColor
 	}
-	w := weight[best]
-	return ui.RGB(uint8(sum[best][0]/w*255), uint8(sum[best][1]/w*255), uint8(sum[best][2]/w*255))
+	colorOf := func(k int) ui.Color {
+		w := weight[k]
+		return ui.RGB(uint8(sum[k][0]/w*255), uint8(sum[k][1]/w*255), uint8(sum[k][2]/w*255))
+	}
+	main = colorOf(best)
+	// The hue farthest from it that still covers some of the cover.
+	second, far := main, 0.0
+	for k := range weight {
+		if k == best || weight[k] < weight[best]*0.12 {
+			continue
+		}
+		if gap := hueBucketGap(k, best, buckets); gap > far {
+			second, far = colorOf(k), gap
+		}
+	}
+	return main, second
+}
+
+// hueBucketGap is how far apart two hue buckets are, the short way round,
+// in degrees.
+func hueBucketGap(a, b, buckets int) float64 {
+	d := math.Abs(float64(a-b)) / float64(buckets) * 360
+	return math.Min(d, 360-d)
 }
 
 func hsv(r, g, b float64) (h, s, v float64) {
@@ -437,8 +479,15 @@ func hsv(r, g, b float64) (h, s, v float64) {
 
 // blurImage returns img shrunk and blurred, more saturated, to fill a
 // backdrop behind what plays, scaled up as smooth as it is.
-func blurImage(img image.Image) *image.RGBA {
-	const n = 48
+func blurImage(img image.Image) *image.RGBA { return blurredImage(img, 48, 3, 5) }
+
+// blurSoft returns img blurred only as much as a cover shown under its own
+// date needs: its shapes still read through, where a backdrop's wash does not.
+func blurSoft(img image.Image) *image.RGBA { return blurredImage(img, 96, 1, 2) }
+
+// blurredImage shrinks img to n pixels across and blurs it passes times by a
+// box of the given radius, more saturated, as light through colored glass.
+func blurredImage(img image.Image, n, passes, radius int) *image.RGBA {
 	small := shrink(img, n)
 	px := make([][3]float64, n*n)
 	for i := range px {
@@ -448,8 +497,8 @@ func blurImage(img image.Image) *image.RGBA {
 		px[i] = [3]float64{l + (r-l)*1.5, l + (g-l)*1.5, l + (b-l)*1.5}
 	}
 	tmp := make([][3]float64, n*n)
-	for range 3 {
-		boxBlur(px, tmp, n, 5)
+	for range passes {
+		boxBlur(px, tmp, n, radius)
 	}
 	out := image.NewRGBA(image.Rect(0, 0, n, n))
 	for i, p := range px {

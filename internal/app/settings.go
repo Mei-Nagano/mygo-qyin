@@ -85,9 +85,13 @@ type settings struct {
 	// place of the lyrics (quietComment): the listener turns it on.
 	HotComments bool `json:"hotComments"`
 	// Fog fills Now Playing's backdrop with fog of the cover's color,
-	// rising and swelling with the bass: an experiment the listener turns
-	// on.
+	// rising and swelling with the bass: the choice BackdropStyle names as
+	// fog, kept so that installs saved before the selector still read.
 	Fog bool `json:"fog"`
+	// BackdropStyle paints Now Playing's backdrop: colored, the cover's
+	// colors as a gradient; fluid, two of them flowing as liquid; or fog,
+	// the experiment above. Empty keeps the old Fog switch.
+	BackdropStyle string `json:"backdropStyle,omitempty"`
 	// AppIcon is where the app's icon shows on macOS (appIcons); elsewhere
 	// it is always in the notification area.
 	AppIcon string `json:"appIcon"`
@@ -247,6 +251,38 @@ func (s settings) save() error {
 		return err
 	}
 	return os.WriteFile(path, b, 0o600)
+}
+
+const (
+	backdropColored = "colored"
+	backdropFluid   = "fluid"
+	backdropFog     = "fog"
+)
+
+// backdropStyles are the effects of Now Playing's backdrop, named as the
+// pages name them.
+var backdropStyles = []struct{ id, label string }{
+	{backdropColored, "取色"},
+	{backdropFluid, "流体"},
+	{backdropFog, "烟雾"},
+}
+
+// backdropStyle names the effect chosen; the old Fog switch keeps choosing
+// the fog for installs saved before the selector.
+func (s settings) backdropStyle() string {
+	switch s.BackdropStyle {
+	case backdropColored, backdropFluid, backdropFog:
+		return s.BackdropStyle
+	}
+	if s.Fog {
+		return backdropFog
+	}
+	return backdropColored
+}
+
+func (s *settings) setBackdropStyle(id string) {
+	s.BackdropStyle = id
+	s.Fog = id == backdropFog
 }
 
 // pageMaterial tells whether the page shows the Windows material too, as its

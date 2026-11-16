@@ -152,7 +152,8 @@ func (a *app) nowPlayingView(c *ui.Context) {
 	root := ui.Box(c.Key("now-playing")).Absolute().Top(0).Left(0).Right(0).Bottom(0).
 		Background(bg).TextColor(white)
 	// Keep the controls visible while the pointer is in their detached effect menu.
-	pointerIn := root.Hovered() || a.stageStyleOpen || a.lyricsSizeOpen || a.lyricsSizeTrigger.Focused(c)
+	pointerIn := root.Hovered() || a.stageStyleOpen || a.backdropOpen ||
+		a.lyricsSizeOpen || a.lyricsSizeTrigger.Focused(c)
 	root.Children(func() {
 		bloom := ui.Box(c.Key("bloom")).Absolute().Top(0).Left(0).Right(0).Bottom(0).PassThrough()
 		if t := a.npT; t < 1 && !a.npStill {
@@ -202,6 +203,9 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 				}
 			})
 		})
+		// The effect of the backdrop, beside what plays, in every pane.
+		effects := reveal(ui.Row(c).Absolute().Top(0).Right(npSideX(w)).Height(topBar(c)).AlignItems(ui.Center), pointerIn)
+		a.npRise(effects, 0).Children(func() { a.backdropButton(c) })
 		if a.npPane == paneStage {
 			// The stage takes the whole view: the lyrics are the show, the
 			// controls a slim bar at the foot.

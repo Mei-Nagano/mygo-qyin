@@ -50,6 +50,9 @@ func (a *app) view(c *ui.Context) {
 	if !a.nowPlaying || a.npPane != paneStage {
 		a.stageStyleOpen = false
 	}
+	if !a.nowPlaying {
+		a.backdropOpen = false
+	}
 	if !npOpen || a.npPane != paneLyrics {
 		a.lyricsSizeOpen = false
 	}

@@ -226,6 +226,15 @@ func backdrop(art *artwork) *ui.Bitmap {
 	return art.backdrop
 }
 
+// softArt is the cover blurred lightly, as a day's own cover shows it with
+// its date over it: enough to set the words apart, its shapes still read.
+func softArt(art *artwork) *ui.Bitmap {
+	if art == nil {
+		return nil
+	}
+	return art.soft
+}
+
 // artFade is how an artwork fades in over its placeholder.
 var artFade = ui.Animation{Duration: 320 * time.Millisecond}
 

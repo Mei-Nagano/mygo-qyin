@@ -350,9 +350,23 @@ func (a *app) settingsContent(c *ui.Context) {
 				a.redraw()
 			}
 		})
-		row("烟雾背景", "播放页的背景化作封面色调的烟雾，缓缓升起，随低音起伏；仍在打磨，会多用一些电量", func() {
-			if ui.Switch(c.Key("fog"), &s.Fog).Label("烟雾背景").Changed() {
-				a.changed()
+		row("背景效果", "播放页背景：取色，封面色的渐层，模糊封面淡淡透出；流体，两种封面色像液体交融流动；烟雾，随低音起伏（实验，会多用一些电量）", func() {
+			labels := make([]string, len(backdropStyles))
+			chosen := backdropStyles[0].label
+			for i, style := range backdropStyles {
+				labels[i] = style.label
+				if style.id == s.backdropStyle() {
+					chosen = style.label
+				}
+			}
+			if ui.Select(c.Key("backdrop-style"), &chosen, labels).Label("选择背景效果").Width(150).Changed() {
+				for _, style := range backdropStyles {
+					if style.label == chosen {
+						s.setBackdropStyle(style.id)
+					}
+				}
+				s.save()
+				a.redraw()
 			}
 		})
 	})

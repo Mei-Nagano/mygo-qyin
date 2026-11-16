@@ -156,6 +156,7 @@ type app struct {
 	tabCount    rollState // the count on the comments' tab, as it rolls
 
 	stageStyleOpen    bool // the stage's effect menu shows
+	backdropOpen      bool // the backdrop's effect menu shows
 	lyricsSizeOpen    bool // the scrolling lyrics' size popover shows
 	lyricsSizeTrigger ui.Handle
 

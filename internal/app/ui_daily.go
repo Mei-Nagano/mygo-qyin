@@ -27,21 +27,21 @@ func (a *app) dailyArt(c *ui.Context, songs []qqmusic.Track, now time.Time, size
 func (a *app) dailyDayArt(c *ui.Context, pic string, now time.Time, size float32) {
 	var art *artwork
 	if pic != "" {
-		art = a.art.get(qqmusic.Sized(pic, 600), artBackdrop)
+		art = a.art.get(qqmusic.Sized(pic, 600), artSoftCover)
 	}
 	radius := size * 0.07
 	box := ui.Box(c).Size(size, size).Radius(radius).Background(radixSage(true, 6)).
 		Shadow(0, 18, 40, -10, a.pal.cardShade)
-	in := artIn(box, backdrop(art))
+	in := artIn(box, softArt(art))
 	box.Children(func() {
-		artImage(c, backdrop(art), radius, in)
+		artImage(c, softArt(art), radius, in)
 		ui.Box(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Radius(radius).
 			LinearGradient(ui.LinearGradient{Angle: 180, Stops: []ui.GradientStop{
 				{Color: radixInk.Alpha(0), At: 0.35},
 				{Color: radixInk.Alpha(0.4), At: 1},
 			}})
 		ui.Column(c).Absolute().Left(size * 0.09).Bottom(size * 0.08).TextColor(white).Children(func() {
-			ui.Textf(c, "%d", now.Day()).FontSize(size * 0.44).FontWeight(300).LetterSpacing(-size * 0.02).FontFeatures("tnum").LineHeight(1)
+			ui.Textf(c, "%d", now.Day()).FontSize(size * 0.37).FontWeight(400).LetterSpacing(-size * 0.015).FontFeatures("tnum").LineHeight(1)
 			ui.Textf(c, "%d月 · %s", now.Month(), weekday(now)).FontSize(max(11, size*0.075)).FontWeight(600).TextColor(white.Alpha(0.85))
 		})
 	})
