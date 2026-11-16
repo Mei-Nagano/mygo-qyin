@@ -135,17 +135,18 @@ func Fragment(dst vec4, pos vec2) vec4 {
 	uv := pos / size
 	asp := size.x / size.y
 	t := Time * 0.45
-	// The whole field drifts through noise of its own, so that the masses
-	// churn and their edges fold as liquids do, rather than sliding whole.
-	warp := vec2(noise(uv*2.2+vec2(t*0.35, 0))-0.5, noise(uv*2.2+vec2(4.7, 1.3)-vec2(0, t*0.3))-0.5)
-	p := uv + warp*0.19
+	// The whole field drifts through noise of its own, so that the edges of
+	// the colors fold and flow as liquids do, rather than sliding whole.
+	warp := vec2(noise(uv*1.8+vec2(t*0.30, 0))-0.5, noise(uv*1.8+vec2(4.7, 1.3)-vec2(0, t*0.26))-0.5)
+	p := uv + warp*0.34
 	// The two colors folded into a deep base, drifting between them.
 	base := mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)) * 0.8
-	// Round masses, each on a slow loop of its own, breathing as the bass
-	// comes, their colors mixed by how much of each shows here.
-	breath := 1.0 + 0.03*sin(t*0.9) + 0.07*Bass
-	da := density(p, asp, vec2(0.36+0.17*sin(t*0.7), 0.42+0.14*sin(t*1.1+1.3)), 0.60*breath)
-	db := density(p, asp, vec2(0.66+0.15*sin(t*0.9+2.1), 0.60+0.16*sin(t*0.6+0.4)), 0.55*breath)
+	// Each color takes a mass far larger than the view, its center near a
+	// corner: their edges fall outside the frame, so what shows is fields of
+	// color meeting and folding, never a ball. They breathe as the bass comes.
+	breath := 1.0 + 0.03*sin(t*0.8) + 0.06*Bass
+	da := density(p, asp, vec2(0.20+0.12*sin(t*0.6), 0.26+0.10*sin(t*0.9+1.3)), 1.30*breath)
+	db := density(p, asp, vec2(0.80+0.12*sin(t*0.7+2.1), 0.74+0.11*sin(t*0.5+0.6)), 1.20*breath)
 	cov := 1.0 - (1.0-da)*(1.0-db)
 	mixed := (A.rgb*da + B.rgb*db) / (da + db + 0.0001)
 	c := mix(base, mixed*1.04, smoothstep(0.0, 1.0, cov))
