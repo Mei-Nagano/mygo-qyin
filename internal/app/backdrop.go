@@ -120,35 +120,23 @@ func noise(p vec2) float {
 	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
 }
 
-// density is how much of a mass covers uv: one at its center, fading out
-// slowly at its edge, squared so that the masses melt into one another
-// where they meet. uv is the pixel over the canvas, asp the canvas' width
-// over its height, radius the mass' share of the height.
-func density(uv vec2, asp float, center vec2, radius float) float {
-	d := length((uv - center) * vec2(asp, 1.0)) / radius
-	k := 1.0 - smoothstep(0.0, 1.0, d)
-	return k * k
-}
-
 func Fragment(dst vec4, pos vec2) vec4 {
 	size := rectSize()
 	uv := pos / size
-	asp := size.x / size.y
 	t := Time * 0.45
-	// The whole field drifts through noise of its own, so that the masses
-	// churn and their edges fold as liquids do, rather than sliding whole.
-	warp := vec2(noise(uv*2.2+vec2(t*0.35, 0))-0.5, noise(uv*2.2+vec2(4.7, 1.3)-vec2(0, t*0.3))-0.5)
-	p := uv + warp*0.19
-	// The two colors folded into a deep base, drifting between them.
-	base := mix(A.rgb, B.rgb, 0.5+0.35*sin(t*0.5)) * 0.8
-	// Round masses, each on a slow loop of its own, breathing as the bass
-	// comes, their colors mixed by how much of each shows here.
-	breath := 1.0 + 0.03*sin(t*0.9) + 0.07*Bass
-	da := density(p, asp, vec2(0.36+0.17*sin(t*0.7), 0.42+0.14*sin(t*1.1+1.3)), 0.60*breath)
-	db := density(p, asp, vec2(0.66+0.15*sin(t*0.9+2.1), 0.60+0.16*sin(t*0.6+0.4)), 0.55*breath)
-	cov := 1.0 - (1.0-da)*(1.0-db)
-	mixed := (A.rgb*da + B.rgb*db) / (da + db + 0.0001)
-	c := mix(base, mixed*1.04, smoothstep(0.0, 1.0, cov))
+	// The field the colors are laid on drifts through noise of its own, so
+	// that the edges between them fold and flow as liquids do.
+	warp := vec2(noise(uv*2.0+vec2(t*0.30, 0))-0.5, noise(uv*2.0+vec2(4.7, 1.3)-vec2(0, t*0.26))-0.5)
+	p := uv + warp*0.26
+	// A wave across the width and one down the height, each of one period:
+	// their product is positive in two opposite quarters and negative in
+	// the other two, so the colors cross the view as four broad blocks.
+	// The bass and the slow phases move the waves, and with them where the
+	// blocks meet.
+	u := sin(p.x*6.2832 + 0.45*sin(t*0.40))
+	v := sin(p.y*6.2832 - 0.45*sin(t*0.34) + 1.5708 - 0.3*Bass)
+	w := smoothstep(-0.5, 0.5, u*v)
+	c := mix(A.rgb, B.rgb, w)
 	// A soft light through the middle, darker at the corners and the foot.
 	glow := length((uv - vec2(0.5, 0.42)) * vec2(1.0, 1.25))
 	c *= 1.16 - 0.5*smoothstep(0.15, 0.92, glow)
