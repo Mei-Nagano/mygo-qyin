@@ -263,6 +263,11 @@ func (a *app) nowPlayingBody(c *ui.Context, tr *qqmusic.Track, art *artwork, acc
 				a.npRise(ui.Box(c).Margin(14, 0, 18, 0), 3).Children(func() {
 					a.transport(c, white, white.Alpha(0.45), accent, 28, mediaSurface)
 				})
+				// The volume, as the speaker that opens it: the row keeps the
+				// songs and their controls alone.
+				a.npRise(ui.Row(c).Justify(ui.Center).Margin(10, 0, 0, 0), 4).Children(func() {
+					a.volumeButton(c, white.Alpha(0.6))
+				})
 			})
 
 			pane := ui.Column(c.Key("pane")).Grow(1).Basis(0).MinWidth(0)

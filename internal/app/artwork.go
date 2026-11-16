@@ -464,7 +464,7 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 	// backdrop sets apart by depth.
 	second, far := main, 0.0
 	for k := range weight {
-		if k == best || weight[k] < weight[best]*0.2 {
+		if k == best || weight[k] < weight[best]*0.12 {
 			continue
 		}
 		if gap := hueBucketGap(k, best, buckets); gap > far {
