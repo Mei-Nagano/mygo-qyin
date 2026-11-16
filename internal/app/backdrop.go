@@ -356,7 +356,9 @@ func fluidColors(main, second ui.Color) (a, b ui.Color) {
 		// Gray: two shades of it, so that the fluid still has a shape.
 		return hsvColor(0, 0, 0.38), hsvColor(0, 0, 0.17)
 	}
-	depth := func(s float64) float64 { return min(max(s*1.25, 0.5), 0.88) }
+	// Deep enough for white to read over, and no more saturated than the
+	// cover's own color: a pale cover keeps its quiet.
+	depth := func(s float64) float64 { return min(max(s*1.25, 0.3), 0.88) }
 	if s1 < 0.12 {
 		h1, s1 = h2, s2
 	}

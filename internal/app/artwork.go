@@ -403,20 +403,23 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 	small := shrink(img, 24)
 	const buckets = 18
 	var weight [buckets]float64
+	var area [buckets]int
 	var sum [buckets][3]float64
 	var gray [3]float64
 	for i := 0; i < len(small.Pix); i += 4 {
 		r, g, b := float64(small.Pix[i])/255, float64(small.Pix[i+1])/255, float64(small.Pix[i+2])/255
 		h, s, v := hsv(r, g, b)
 		gray[0], gray[1], gray[2] = gray[0]+r, gray[1]+g, gray[2]+b
-		// Saturation and brightness both: a bright, vivid area reads as the
-		// cover's color even where a duller one covers more of it.
-		w := s * v * v
+		// Saturation and brightness, both squared: a vivid, bright area reads
+		// as the cover's color even where a paler one covers more of it, as
+		// the ink of a drawing does over its paper.
+		w := s * s * v * v
 		if s < 0.15 || v < 0.15 {
 			continue
 		}
 		k := int(h/360*buckets) % buckets
 		weight[k] += w
+		area[k]++
 		sum[k][0], sum[k][1], sum[k][2] = sum[k][0]+r*w, sum[k][1]+g*w, sum[k][2]+b*w
 	}
 	best := 0
@@ -425,7 +428,9 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 			best = k
 		}
 	}
-	if weight[best] < 2 {
+	// Too little of the cover is colored at all, rather than its color being
+	// pale: three percent of it is the least that reads as its color.
+	if area[best] < len(small.Pix)/4/34 {
 		n := float64(len(small.Pix) / 4)
 		grayColor := ui.RGB(uint8(gray[0]/n*255), uint8(gray[1]/n*255), uint8(gray[2]/n*255))
 		return grayColor, grayColor
