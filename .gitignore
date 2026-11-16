@@ -18,3 +18,12 @@ RELEASING.md
 /.codex/
 /.trellis/
 /.gitattributes
+
+# Local scratch: temporary harnesses, probes, captures and OS droppings
+/scratch/
+/tmp/
+/shots/
+zz_*
+*.log
+.DS_Store
+Thumbs.db
