@@ -27,8 +27,8 @@ func (a *app) dailyHistoryButton(c *ui.Context) {
 	}
 }
 
-// dailyHistoryPage lists the days on file, newest first; opening one
-// reads what QQ picked that day.
+// dailyHistoryPage lists the days on file before today as cards, newest
+// first; opening one reads what QQ picked that day.
 func (a *app) dailyHistoryPage(c *ui.Context) {
 	d := a.dailyArchive
 	if d == nil || a.profile == nil {
@@ -36,6 +36,7 @@ func (a *app) dailyHistoryPage(c *ui.Context) {
 		return
 	}
 	p := a.pal
+	days := d.pastDays(dailyDayNum(time.Now()))
 	top, bottom := a.insets(c)
 	ui.Scroll(c.Key("daily-history")).TrackScroll(&a.pageState().scroll).Grow(1).
 		Padding(top+pageGap, pagePad, bottom+48, pagePad).ScrollbarInsets(top, 0, bottom, 0).
@@ -47,37 +48,54 @@ func (a *app) dailyHistoryPage(c *ui.Context) {
 				switch {
 				case d.loading:
 					ui.Text(c, "正在读取留档…").FontSize(13).TextColor(p.muted)
-				case len(d.days) == 0:
-					ui.Text(c, "还没有留档：应用开着的时候，每天的推荐会自动记下。").
+				case len(days) == 0:
+					ui.Text(c, "还没有更早的留档：应用开着的时候，每天的推荐会自动记下。").
 						FontSize(13).TextColor(p.muted)
 				default:
-					ui.Column(c).Gap(4).Children(func() {
-						for _, num := range d.days {
-							a.dailyHistoryRow(c, num)
-						}
-					})
+					a.dailyHistoryGrid(c, days)
 				}
 			})
 		})
 }
 
-// dailyHistoryRow is one kept day in the list of the past.
-func (a *app) dailyHistoryRow(c *ui.Context, num int64) {
-	p := a.pal
-	when := dailyDayTime(num)
-	label := fmt.Sprintf("%d月%d日 · %s", int(when.Month()), when.Day(), weekday(when))
-	row := ui.ButtonBase(c.Key(num)).Height(48).PaddingX(16).Radius(12).
-		AlignItems(ui.Center).FocusRing(false).Label(label)
-	bg := ui.Transparent
-	if row.Hovered() {
-		bg = p.hover
-	}
-	row.Background(row.AnimateColor("bg", bg, ui.Animation{Duration: 100 * time.Millisecond}))
-	row.Children(func() {
-		ui.Text(c, label).FontSize(14).FontWeight(600).SingleLine()
+// dailyHistoryGrid sets the kept days as the album cards of the purchased
+// music are: a grid of covers over the day and its count.
+func (a *app) dailyHistoryGrid(c *ui.Context, days []dailyDay) {
+	cols := a.columns(c, 156)
+	w, _ := c.Size()
+	// A card takes what the grid gives it, the gaps between taken out.
+	size := (w - sidebarWidth - 2*pagePad - 20*float32(cols-1)) / float32(cols)
+	ui.Grid(c).Columns(cols).GapX(20).GapY(28).Children(func() {
+		for _, day := range days {
+			a.dailyHistoryCard(c, day, size)
+		}
 	})
-	if row.Clicked() {
-		a.open(route{page: pageDaily, id: num})
+}
+
+// dailyHistoryCard is one kept day: its date over its first cover, as the
+// day itself was given, over the day and how many songs it kept.
+func (a *app) dailyHistoryCard(c *ui.Context, day dailyDay, size float32) {
+	p := a.pal
+	when := dailyDayTime(day.num)
+	label := fmt.Sprintf("%d月%d日 · %s", int(when.Month()), when.Day(), weekday(when))
+	card := ui.ButtonBase(c.Key(day.num)).Column().Gap(10).AlignItems(ui.Stretch).FocusRing(false).Label(label)
+	hovered := card.Hovered()
+	card.Children(func() {
+		lift := ui.Pose{}
+		cover := ui.Box(c).Size(size, size).Radius(max(8, size*0.06))
+		if hovered {
+			lift = ui.Pose{Y: -3}
+			cover.Shadow(0, 12, 28, -6, p.cardShade)
+		} else {
+			cover.Shadow(0, 2, 8, -2, p.cardShade)
+		}
+		cover.AnimatePose(lift, ui.Snappy)
+		cover.Children(func() { a.dailyDayArt(c, day.cover, when, size) })
+		ui.Text(c, label).FontSize(13).FontWeight(500).MaxLines(2).LineHeight(1.35)
+		ui.Text(c, fmt.Sprintf("%d 首", day.count)).FontSize(12).TextColor(p.muted).SingleLine().Margin(-6, 0, 0, 0)
+	})
+	if card.Clicked() {
+		a.open(route{page: pageDaily, id: day.num})
 	}
 }
 

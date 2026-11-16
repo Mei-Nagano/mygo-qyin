@@ -14,9 +14,9 @@ import (
 // dailyArchiveData is what the day page shows of the days kept: the list
 // of them, and the one opened.
 type dailyArchiveData struct {
-	dir     string  // where this listener's kept days are
-	days    []int64 // the days kept, newest first
-	loading bool    // the days are still listed
+	dir     string     // where this listener's kept days are
+	days    []dailyDay // the days kept, newest first
+	loading bool       // the days are still listed
 	shown   map[int64]*dailyPast
 }
 
@@ -41,28 +41,41 @@ func (a *app) loadDailyArchive() {
 	}
 	d.loading = true
 	go func() {
-		nums := dailyDayNums(d.dir)
-		a.post(func() { a.dailyArchiveAnswered(d, nums) })
+		days := dailyDays(d.dir)
+		a.post(func() { a.dailyArchiveAnswered(d, days) })
 	}()
 }
 
-func (a *app) dailyArchiveAnswered(d *dailyArchiveData, days []int64) {
+func (a *app) dailyArchiveAnswered(d *dailyArchiveData, days []dailyDay) {
 	if a.dailyArchive != d {
 		return
 	}
 	d.loading, d.days = false, days
 }
 
+// pastDays is the days kept before today, newest first: today's picks are
+// the day page's own, so the list of the past leaves them out.
+func (d *dailyArchiveData) pastDays(today int64) []dailyDay {
+	past := make([]dailyDay, 0, len(d.days))
+	for _, day := range d.days {
+		if day.num != today {
+			past = append(past, day)
+		}
+	}
+	return past
+}
+
 // dailyRecorded folds a freshly kept day into the list of the past.
-func (a *app) dailyRecorded(num int64) {
+func (a *app) dailyRecorded(day dailyDay) {
 	d := a.dailyArchive
-	if d == nil || d.loading {
+	if d == nil || d.loading || day.num == 0 {
 		return
 	}
-	if slices.Contains(d.days, num) {
+	kept := func(k dailyDay) bool { return k.num == day.num }
+	if slices.ContainsFunc(d.days, kept) {
 		return
 	}
-	d.days = append([]int64{num}, d.days...)
+	d.days = append([]dailyDay{day}, d.days...)
 }
 
 // loadDailyPast reads one kept day when the listener opens it. After it

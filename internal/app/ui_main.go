@@ -481,7 +481,7 @@ func (a *app) loadHome() {
 			a.homeLoading = false
 			// Only fold the kept day into the archive of the account
 			// this very request was made for.
-			if kept != 0 && a.dailyArchive != nil && a.dailyArchive.dir == dir {
+			if kept.num != 0 && a.dailyArchive != nil && a.dailyArchive.dir == dir {
 				a.dailyRecorded(kept)
 			}
 			if err1 != nil && err2 != nil {

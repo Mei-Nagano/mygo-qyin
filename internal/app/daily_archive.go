@@ -63,34 +63,81 @@ func dailyArchivePath(uin int64) string {
 	return filepath.Join(dir, "daily", strconv.FormatInt(uin, 10))
 }
 
+// dailyFilePath is where one kept day's songs are.
 func dailyFilePath(dir string, num int64) string {
 	return filepath.Join(dir, strconv.FormatInt(num, 10)+".json")
 }
 
+// dailyDays names the days kept under dir, newest first, with what the
+// cards of them show.
+func dailyDays(dir string) []dailyDay {
+	nums := dailyDayNums(dir)
+	days := make([]dailyDay, 0, len(nums))
+	for _, num := range nums {
+		days = append(days, readDailyDay(dir, num))
+	}
+	return days
+}
+
+// readDailyDay reads one kept day's card: its first cover and its count.
+func readDailyDay(dir string, num int64) dailyDay {
+	day := dailyDay{num: num}
+	b, err := os.ReadFile(dailyFilePath(dir, num))
+	if err != nil {
+		return day
+	}
+	var note dailyDayNote
+	if json.Unmarshal(b, &note) != nil {
+		return day
+	}
+	day.count = len(note.Tracks)
+	if day.count > 0 {
+		day.cover = note.Tracks[0].Album.PicURL
+	}
+	return day
+}
+
+// dailyDay is one of the days kept, as the card of it shows it.
+type dailyDay struct {
+	num   int64
+	cover string // the first of its songs' covers
+	count int    // how many songs it kept
+}
+
+// dailyDayNote is what a kept day's file says of it, read without loading
+// its songs: the day's cards need only the first of them.
+type dailyDayNote struct {
+	Tracks []struct {
+		Album struct {
+			PicURL string `json:"picUrl"`
+		} `json:"al"`
+	} `json:"tracks"`
+}
+
 // recordDaily keeps one day's picks as they arrive, on a goroutine. A day
 // already kept holds what was first read of it. The day written is
-// answered, 0 when nothing was.
-func recordDaily(dir string, songs []qqmusic.Track, now time.Time) int64 {
+// answered, its number 0 when nothing was.
+func recordDaily(dir string, songs []qqmusic.Track, now time.Time) dailyDay {
 	if dir == "" || len(songs) == 0 {
-		return 0
+		return dailyDay{}
 	}
 	num := dailyDayNum(now)
 	path := dailyFilePath(dir, num)
 	if _, err := os.Stat(path); err == nil {
-		return 0
+		return dailyDay{}
 	}
 	if os.MkdirAll(dir, 0o700) != nil {
-		return 0
+		return dailyDay{}
 	}
 	b, err := json.Marshal(dailyRecord{At: now, Tracks: songs})
 	if err != nil || os.WriteFile(path+".part", b, 0o600) != nil {
-		return 0
+		return dailyDay{}
 	}
 	if os.Rename(path+".part", path) != nil {
-		return 0
+		return dailyDay{}
 	}
 	pruneDaily(dir)
-	return num
+	return dailyDay{num: num, cover: songs[0].Album.PicURL, count: len(songs)}
 }
 
 // pruneDaily drops all but the newest dailyKeep days.

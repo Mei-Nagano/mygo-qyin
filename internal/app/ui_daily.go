@@ -15,9 +15,19 @@ import (
 // dailyArt is the cover of the day's songs: their first cover, blurred,
 // with the date set large over it.
 func (a *app) dailyArt(c *ui.Context, songs []qqmusic.Track, now time.Time, size float32) {
-	var art *artwork
+	pic := ""
 	if len(songs) > 0 {
-		art = a.art.get(qqmusic.Sized(songs[0].Album.PicURL, 600), artBackdrop)
+		pic = songs[0].Album.PicURL
+	}
+	a.dailyDayArt(c, pic, now, size)
+}
+
+// dailyDayArt is one day's cover from the first of its songs' covers, which
+// the cards of the days kept show too, having only that one kept.
+func (a *app) dailyDayArt(c *ui.Context, pic string, now time.Time, size float32) {
+	var art *artwork
+	if pic != "" {
+		art = a.art.get(qqmusic.Sized(pic, 600), artBackdrop)
 	}
 	radius := size * 0.07
 	box := ui.Box(c).Size(size, size).Radius(radius).Background(radixSage(true, 6)).
