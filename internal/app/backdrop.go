@@ -363,7 +363,7 @@ func fluidColors(main, second ui.Color) (a, b ui.Color) {
 		// Paper: the cover's own quiet gray, and the color printed on it.
 		return hsvColor(h1, min(s1*1.5, 0.10), 0.31), hsvColor(h2, depth(s2), 0.23)
 	}
-	if hueGap(h1, h2) < 40 {
+	if hueGap(h1, h2) < 25 {
 		// The cover holds one hue: its two colors are that hue light and
 		// deep, the two shades of it the cover itself shows.
 		return hsvColor(h1, depth(s1), 0.38), hsvColor(h1, depth(s1)*0.9, 0.15)

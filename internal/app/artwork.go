@@ -459,17 +459,26 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 		return paperColor, colorOf(best)
 	}
 	main = colorOf(best)
-	// The hue farthest from it that still covers some of the cover; where no
-	// other hue covers enough, it answers its own color again, which the
-	// backdrop sets apart by depth.
+	// The hue farthest from it that covers a visible part of the cover: a
+	// share of all the cover's color, not of the one color that covers most
+	// of it, so that small bright emblems still count. Where no other hue is
+	// far enough to read as one, it answers its own color again, which the
+	// backdrop then sets apart by depth.
+	colored := 0.0
+	for k := range weight {
+		colored += weight[k]
+	}
 	second, far := main, 0.0
 	for k := range weight {
-		if k == best || weight[k] < weight[best]*0.12 {
+		if k == best || weight[k] < colored*0.025 {
 			continue
 		}
 		if gap := hueBucketGap(k, best, buckets); gap > far {
 			second, far = colorOf(k), gap
 		}
+	}
+	if far < 25 {
+		second = main
 	}
 	if far <= 0 {
 		// The cover holds one hue only: it answers that same color, which
