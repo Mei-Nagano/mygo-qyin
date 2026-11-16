@@ -360,12 +360,12 @@ func fluidColors(main, second ui.Color) (a, b ui.Color) {
 	if s1 < 0.12 {
 		h1, s1 = h2, s2
 	}
-	// Near hues look like one color spread thin: the second turns away from
-	// the first rather than sit beside it.
-	if hueGap(h1, h2) < 90 {
-		h2, s2 = math.Mod(h1+150, 360), max(s2, s1)
+	if hueGap(h1, h2) < 40 {
+		// The cover holds one hue: its two colors are that hue light and
+		// deep, the two shades of it the cover itself shows.
+		return hsvColor(h1, depth(s1), 0.38), hsvColor(h1, depth(s1)*0.9, 0.15)
 	}
-	return hsvColor(h1, depth(s1), 0.34), hsvColor(h2, depth(s2), 0.23)
+	return hsvColor(h1, depth(s1), 0.36), hsvColor(h2, depth(s2), 0.22)
 }
 
 // hueGap is how far apart two hues are, the short way round, in degrees.

@@ -398,7 +398,7 @@ func dominantColor(img image.Image) ui.Color {
 
 // dominantColors returns that color, and a second one far enough from it in
 // hue to read as another: the two the fluid backdrop mixes. A cover of one
-// hue answers the same color twice, which the backdrop then turns apart.
+// hue answers the same color twice, which the backdrop sets apart by depth.
 func dominantColors(img image.Image) (main, second ui.Color) {
 	small := shrink(img, 24)
 	const buckets = 18
@@ -448,9 +448,11 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 			second, far = colorOf(k), gap
 		}
 	}
-	if far < 90 {
-		h, s, v := hsv(float64(main.R)/255, float64(main.G)/255, float64(main.B)/255)
-		return main, hsvColor(math.Mod(h+150, 360), s, v)
+	if far < 80 {
+		// The cover holds one hue only: its second color is that same hue,
+		// which the backdrop sets apart by depth. Turning to a hue the cover
+		// never had would paint with colors of its own invention.
+		return main, main
 	}
 	return main, second
 }
