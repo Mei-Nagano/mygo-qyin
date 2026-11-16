@@ -134,7 +134,7 @@ func Fragment(dst vec4, pos vec2) vec4 {
 	size := rectSize()
 	uv := pos / size
 	asp := size.x / size.y
-	t := Time * 0.45
+	t := Time * 0.85
 	// The whole field drifts through noise of its own, so that the edges of
 	// the colors fold and flow as liquids do, rather than sliding whole.
 	warp := vec2(noise(uv*1.8+vec2(t*0.30, 0))-0.5, noise(uv*1.8+vec2(4.7, 1.3)-vec2(0, t*0.26))-0.5)
