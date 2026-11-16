@@ -410,10 +410,11 @@ func dominantColors(img image.Image) (main, second ui.Color) {
 		r, g, b := float64(small.Pix[i])/255, float64(small.Pix[i+1])/255, float64(small.Pix[i+2])/255
 		h, s, v := hsv(r, g, b)
 		gray[0], gray[1], gray[2] = gray[0]+r, gray[1]+g, gray[2]+b
-		// Saturation and brightness, both squared: a vivid, bright area reads
-		// as the cover's color even where a paler one covers more of it, as
-		// the ink of a drawing does over its paper.
-		w := s * s * v * v
+		// Saturation and brightness both, brightness twice: a bright area
+		// reads as the cover's color even where a duller one covers more of
+		// it, and where a pale one covers most of it, the pale one is the
+		// cover's color, as paper is a drawing's.
+		w := s * v * v
 		if s < 0.15 || v < 0.15 {
 			continue
 		}

@@ -357,8 +357,8 @@ func fluidColors(main, second ui.Color) (a, b ui.Color) {
 		return hsvColor(0, 0, 0.38), hsvColor(0, 0, 0.17)
 	}
 	// Deep enough for white to read over, and no more saturated than the
-	// cover's own color: a pale cover keeps its quiet.
-	depth := func(s float64) float64 { return min(max(s*1.25, 0.3), 0.88) }
+	// cover's own color: a pale cover turns a quiet gray, not a rich brown.
+	depth := func(s float64) float64 { return min(max(s*0.95, 0.15), 0.85) }
 	if s1 < 0.12 {
 		h1, s1 = h2, s2
 	}
@@ -367,13 +367,12 @@ func fluidColors(main, second ui.Color) (a, b ui.Color) {
 		// deep, the two shades of it the cover itself shows.
 		return hsvColor(h1, depth(s1), 0.38), hsvColor(h1, depth(s1)*0.9, 0.15)
 	}
-	return hsvColor(h1, depth(s1), 0.36), hsvColor(h2, depth(s2), 0.22)
+	return hsvColor(h1, depth(s1), 0.36), hsvColor(h2, depth(s2), 0.24)
 }
 
 // hueGap is how far apart two hues are, the short way round, in degrees.
 func hueGap(a, b float64) float64 {
-	d := math.Abs(math.Mod(a-b+540, 360) - 180)
-	return 180 - d
+	return math.Abs(math.Mod(a-b+180, 360) - 180)
 }
 
 // fogColors returns the deep shade behind the fog and the fog's own for a
