@@ -120,14 +120,13 @@ func noise(p vec2) float {
 	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
 }
 
-// density is how much of a mass covers uv: one at its center, fading out
-// slowly at its edge, squared so that the masses melt into one another
-// where they meet. uv is the pixel over the canvas, asp the canvas' width
-// over its height, radius the mass' share of the height.
+// density is how much of a mass covers uv: one at its center, falling away
+// smooth and plain as a bell does, with no shoulder for the eye to read as a
+// ring. uv is the pixel over the canvas, asp the canvas' width over its
+// height, radius the mass' share of the height.
 func density(uv vec2, asp float, center vec2, radius float) float {
 	d := length((uv - center) * vec2(asp, 1.0)) / radius
-	k := 1.0 - smoothstep(0.0, 1.0, d)
-	return k * k
+	return exp(-d*d*2.4)
 }
 
 func Fragment(dst vec4, pos vec2) vec4 {
@@ -153,7 +152,10 @@ func Fragment(dst vec4, pos vec2) vec4 {
 	// A soft light through the middle, darker at the corners and the foot.
 	glow := length((uv - vec2(0.5, 0.42)) * vec2(1.0, 1.25))
 	c *= 1.16 - 0.5*smoothstep(0.15, 0.92, glow)
-	c = mix(c, c*0.6, smoothstep(0.6, 1.0, uv.y))
+	c = mix(c, c*0.82, smoothstep(0.72, 1.0, uv.y))
+	// A grain of noise over it, which keeps the slow gradients from banding
+	// into rings where they are stretched over the screen.
+	c += vec3(hash(pos+vec2(t*7.0, t*4.0)) - 0.5) * (2.0/255.0)
 	return vec4(c, 1)
 }
 `
